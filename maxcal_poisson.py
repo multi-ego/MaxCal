@@ -463,6 +463,70 @@ def analyse(trajs, qts, args, rng, lams, full=False):
     return out
 
 
+def ks_heatmap(trajs, qts_grid, lams, args, rng):
+    """Median stitched KS p-value and CV on a (Q‡, lambda) grid.  Each cell stitches
+    args.nstitch folding times with the tilted success probability at that Q‡ and
+    tests subsamples of the original size, exactly as stitch_scan does."""
+    ksp = np.full((qts_grid.size, lams.size), np.nan)
+    cv = np.full_like(ksp, np.nan)
+    for i, q in enumerate(qts_grid):
+        A = attempts(trajs, q, args.t0, args.include_initial)
+        if A["fail_pool"].size == 0 or A["succ_pool"].size == 0:
+            continue                                          # empty_pool: NaN column
+        p = success_prob(A["k"], A["done"])
+        n = A["k"].size
+        null = null_D(n)
+        for j, lam in enumerate(lams):
+            pp = tilted_p(p, lam)
+            if (1 - pp) / pp > 1e7:
+                break
+            t = stitch(pp, A["fail_pool"], A["succ_pool"], args.nstitch, rng)
+            sub = rng.choice(t, size=(args.nsub, n))
+            pv = (np.sum(null[None, :] >= D_rows(sub)[:, None], axis=1) + 1) / (null.size + 1)
+            ksp[i, j], cv[i, j] = np.median(pv), t.std() / t.mean()
+    return ksp, cv
+
+
+def write_heatmap(qts_grid, lams, ksp, cv, results, com, args):
+    passed = (ksp >= args.alpha) & (np.abs(cv - 1) <= args.cv_tol)
+    with open(os.path.join(args.out, "heatmap.csv"), "w", newline="") as fh:
+        wr = csv.writer(fh, lineterminator="\n")
+        wr.writerow(["qts", "lambda", "median_ks_p", "cv", "poisson_pass", "qts_valid"])
+        for i, q in enumerate(qts_grid):
+            valid = bool(q < com["Q_barrier"]) if np.isfinite(com["Q_barrier"]) else True
+            for j, lam in enumerate(lams):
+                wr.writerow([f"{q:.4g}", f"{lam:.4g}", f"{ksp[i, j]:.4g}", f"{cv[i, j]:.4g}",
+                             int(passed[i, j]), int(valid)])
+
+    from matplotlib.colors import LogNorm
+    fig, ax = plt.subplots(figsize=(7.5, 4.8))
+    dq = np.diff(qts_grid).min() if qts_grid.size > 1 else 0.05
+    dl = np.diff(lams).min() if lams.size > 1 else 0.5
+    qe = np.r_[qts_grid - dq / 2, qts_grid[-1] + dq / 2]
+    le = np.r_[lams - dl / 2, lams[-1] + dl / 2]
+    im = ax.pcolormesh(qe, le, np.clip(ksp.T, 1e-4, 1), norm=LogNorm(1e-4, 1), cmap="viridis",
+                       shading="flat")
+    fig.colorbar(im, ax=ax, label="median KS p (stitched)")
+    from matplotlib.patches import Rectangle
+    for i, j in zip(*np.nonzero(passed)):                     # hatch exactly the passing cells
+        ax.add_patch(Rectangle((qe[i], le[j]), qe[i + 1] - qe[i], le[j + 1] - le[j], fill=False,
+                               hatch="//", edgecolor="white", lw=0, alpha=0.7))
+    lm = [r["lam_stitch"] for r in results]
+    ax.plot([r["qts"] for r in results], lm, "w^-", ms=6, mec="k", label="λ_min(Q‡)")
+    if np.isfinite(com["Q_barrier"]):
+        ax.axvspan(com["Q_barrier"], qe[-1], color="0.2", alpha=0.45, lw=0,
+                   label=f"Q‡ beyond assumed barrier (q*={args.barrier_q:.2f}): invalid")
+        ax.axvline(com["Q_barrier"], color="k", lw=1)
+    ax.set_xlim(qe[0], qe[-1]); ax.set_ylim(le[0], le[-1])
+    ax.set_xlabel("attempt interface Q‡"); ax.set_ylabel("λ (kT)")
+    ax.set_title("Poisson decision map: hatched = passes (KS p ≥ α and |CV−1| ≤ tol)\n"
+                 "the TS lies between Q‡ and Qf, so only Q‡ before the barrier is meaningful",
+                 fontsize=9)
+    ax.legend(fontsize=7, loc="upper left")
+    fig.tight_layout(); fig.savefig(os.path.join(args.out, "heatmap.png"), dpi=150); plt.close(fig)
+    return passed
+
+
 def committor_tse(trajs, ref, qref, args):
     """Model committor along Q, corrected committor and TS location for a set of lambda
     values and barrier locations q*, TSE frames at the chosen --barrier-q."""
@@ -496,7 +560,8 @@ def committor_tse(trajs, ref, qref, args):
                 qb = q_at(centers, iso, qs)
                 qts, where = ts_location(centers, iso, r, qs)
                 status = ("barrier_before_interface" if qs < q_iface else
-                          "ts_outside_sampled_range" if not np.isfinite(qts) else "ok")
+                          "ts_outside_sampled_range" if not np.isfinite(qts) else
+                          "ts_before_interface" if qts <= qref else "ok")
                 wr.writerow([f"{lam:.4g}", f"{r:.4g}", f"{qs:.3g}", f"{qb:.4g}", f"{qts:.4g}",
                              where, status])
 
@@ -540,6 +605,8 @@ def committor_tse(trajs, ref, qref, args):
     axs[1].set_xlabel("assumed barrier location q* (model committor)"); axs[1].set_ylabel("Q_TS")
     axs[1].set_title("TS location vs assumed barrier location"); axs[1].legend(fontsize=8)
     fig.tight_layout(); fig.savefig(os.path.join(args.out, "ts_location.png"), dpi=150); plt.close(fig)
+    return dict(centers=centers, iso=iso, q_iface=q_iface,
+                Q_barrier=q_at(centers, iso, args.barrier_q), Q_model_ts=q_at(centers, iso, 0.5))
 
 
 def main():
@@ -570,6 +637,10 @@ def main():
                     help="lambda values for the committor-based TSE (default: lambda_min, "
                          "lambda_min+1, lambda_min+2)")
     ap.add_argument("--committor-bins", type=int, default=20)
+    ap.add_argument("--heatmap-nlam", type=int, default=21,
+                    help="number of lambda values in the (Q‡, lambda) KS heatmap (0 disables)")
+    ap.add_argument("--heatmap-lam-max", type=float, default=5.0,
+                    help="largest lambda (kT) in the heatmap")
     ap.add_argument("--tse-window", type=float, default=None,
                     help="half-width in Q of the TSE window around Q_TS (default: one bin)")
     ap.add_argument("--include-initial", action="store_true",
@@ -711,9 +782,19 @@ def main():
     ax.legend(fontsize=8); fig.tight_layout()
     fig.savefig(os.path.join(args.out, "robustness_qts.png"), dpi=150); plt.close(fig)
 
-    committor_tse(trajs, ref, qref, args)
+    com = committor_tse(trajs, ref, qref, args)
+    if qref >= com["Q_barrier"]:
+        print(f"  WARNING: reference Q‡ = {qref:.3f} is not before the assumed barrier "
+              f"(Q = {com['Q_barrier']:.3f}); the TS must lie between Q‡ and Qf.")
+    if args.heatmap_nlam > 0:
+        lams_h = np.linspace(0.0, args.heatmap_lam_max, args.heatmap_nlam)
+        ksp, cvh = ks_heatmap(trajs, grid, lams_h, args, rng)
+        passed = write_heatmap(grid, lams_h, ksp, cvh, results, com, args)
+        valid = grid < com["Q_barrier"] if np.isfinite(com["Q_barrier"]) else np.ones(grid.size, bool)
+        print(f"\n(Q‡, λ) heatmap: {int(passed[valid].sum())}/{int(passed[valid].size)} cells pass "
+              f"among the {int(valid.sum())} Q‡ values before the assumed barrier -> heatmap.png")
 
-    print(f"\nWrote summary.csv, tse_frames_*.csv, committor.csv, ts_location.csv, "
+    print(f"\nWrote summary.csv, heatmap.csv/.png, tse_frames_*.csv, committor.csv, ts_location.csv, "
           f"tse_committor_*.csv, ts_location.png, survival.png, "
           f"lambda_scan.png, robustness_qts.png to {args.out}/")
 

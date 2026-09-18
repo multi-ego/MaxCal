@@ -265,3 +265,14 @@ def test_committor_frames_labels():
     ti, fr, qv, oc = m.committor_frames([traj(q)], QU, QF)
     np.testing.assert_array_equal(fr, [1, 2, 4, 5, 6, 8])
     np.testing.assert_array_equal(oc, [0, 0, 0, 0, 0, 1])
+
+
+def test_ks_heatmap_shapes_and_empty_pool():
+    q = [0.1, 0.4, 0.5, 0.2, 0.35, 0.7, 0.6, 0.1, 0.5, 0.9, 0.2]
+    trajs = [traj(q) for _ in range(12)]
+    args = type("a", (), dict(t0=0.0, include_initial=True, nstitch=300, nsub=20))()
+    ksp, cv = m.ks_heatmap(trajs, np.array([0.45, 0.75]), np.array([0.0, 1.0]), args,
+                           np.random.default_rng(0))
+    assert ksp.shape == (2, 2)
+    assert np.all(np.isfinite(ksp[0])) and np.all((ksp[0] > 0) & (ksp[0] <= 1))
+    assert np.all(np.isnan(ksp[1]))              # no failed attempt reaches 0.75: empty pool

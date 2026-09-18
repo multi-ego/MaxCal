@@ -209,6 +209,28 @@ If Q‡ is placed on the barrier top, the missing barrier also changes how often
 reached. In the validation, stitching then underestimates the true mean folding time
 by a factor of 3–5.
 
+**The transition state lies between Q‡ and Q_f.** The tilt acts only on what happens
+after an attempt passes Q‡, so the missing barrier, and with it the corrected TS, must
+lie beyond Q‡. Q‡ is therefore a lower bound on the TS location. Conversely, a Q‡
+placed at or past the barrier is invalid.
+
+**Decision map.** `heatmap.png` shows the median stitched KS p-value on a grid of Q‡
+(the scan values) and λ:
+- **Hatched cells** pass the Poisson criterion (KS p ≥ α and |CV − 1| ≤ tol).
+- **Triangles** mark λ_min(Q‡).
+- **The shaded region** covers Q‡ at or beyond the assumed barrier location (from
+  `--barrier-q` and the model committor, §2.10), where the analysis does not apply.
+
+A flat λ_min over the valid Q‡ values means the foot interface is well placed and
+λ_min is robust. The shaded boundary is only an upper limit: validity ends where the
+missing barrier *starts*, not at its centre. In the validation (a bump centred at
+0.55), the true λ already falls once Q‡ exceeds about 0.45, and λ_min rises there.
+With real data the observable signal is a rise of λ_min above its low-Q‡ level: use
+the flat region before it. The map says nothing about *where* the TS sits beyond Q‡: folding
+times are insensitive to the barrier location. For the same 3 kT missing barrier
+placed at Q = 0.46, 0.55 or 0.64, the TS moves by 0.17 in Q, but the folding-time
+shapes cannot be told apart (two-sample KS p ≥ 0.25).
+
 The TSE should nevertheless be taken at the barrier top. Use `--qtse` to set a
 separate surface for the transition-state frames (last upward crossing before
 folding), or, better, locate it from the committor as described in §2.10.
@@ -272,6 +294,9 @@ exact to about 10⁻⁴ away from the bump (`tests/test_committor.py`).
   scan q* from 0.1 to 0.9 for λ_min, λ_min+1 and λ_min+2 (or `--tse-lams`), so you
   can see how much your TSE depends on this assumption. Values of q* before the
   attempt interface are flagged, because the tilt assumes the barrier lies beyond Q‡.
+- **Bounds.** The corrected TS always lies between Q‡ and Q_f (§2.8). `ts_location.csv`
+  flags barrier locations before the interface (`barrier_before_interface`) and TS
+  positions that would fall at or before it (`ts_before_interface`).
 - **Fixing q* from experiment.** Φ-values measure the TS structure, so q* can be
   chosen as the model isocommittor surface whose structures best match them.
 - **A naive shortcut fails.** Shifting the model committor by λ in log-odds,
@@ -355,6 +380,7 @@ Lines starting with `#` or `@` are ignored, so GROMACS `.xvg` files work directl
 | `--barrier-q` | assumed location of the missing barrier, as a model committor value q* (default 0.5, the model TS; §2.10) |
 | `--tse-lams` | λ values for the committor-based TSE (default λ_min, λ_min+1, λ_min+2) |
 | `--committor-bins`, `--tse-window` | committor binning along Q; half-width of the TSE window |
+| `--heatmap-nlam`, `--heatmap-lam-max` | λ grid of the (Q‡, λ) KS heatmap (default 21 values in [0, 5] kT; 0 disables) |
 | `--nqts` | number of Q‡ values scanned for robustness |
 | `--t0` | discard an initial relaxation window |
 | `--include-initial` | keep the first segment of each trajectory in the stitching pools |
@@ -367,6 +393,7 @@ Lines starting with `#` or `@` are ignored, so GROMACS `.xvg` files work directl
   KS p-values, λ* with bootstrap CI, N_eff, stitching threshold, and
   `cv_stitch0`/`ksp_stitch0` (stitching at λ = 0).
 - `tse_frames_*.csv`: TSE frame per completed trajectory, with its weight.
+- `heatmap.csv`, `heatmap.png`: the (Q‡, λ) Poisson decision map (§2.8).
 - `committor.csv`, `ts_location.csv`, `ts_location.png`, `tse_committor_*.csv`: model
   committor, corrected TS location, and committor-based TSE frames (§2.10).
 
@@ -396,7 +423,7 @@ told apart from a failure of the code.
 ## 5. Tests
 
 ```bash
-pytest -q tests/                  # 53 fast tests (~10 s)
+pytest -q tests/                  # 54 fast tests (~12 s)
 pytest -q tests/ --runslow        # + 15 validation tests and the demo notebook (~35 s)
 MAXCAL_UPDATE_REF=1 pytest tests/test_regtest.py   # regenerate the reference
 ```

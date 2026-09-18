@@ -67,7 +67,7 @@ def run(tmp_path_factory):
 def test_outputs_exist(run):
     out, _ = run
     for f in ["summary.csv", "survival.png", "lambda_scan.png", "robustness_qts.png",
-              "committor.csv", "ts_location.csv", "ts_location.png"]:
+              "committor.csv", "ts_location.csv", "ts_location.png", "heatmap.csv", "heatmap.png"]:
         assert (out / f).exists(), f
     assert list(out.glob("tse_frames_qts*.csv"))
     assert list(out.glob("tse_committor_lam*_q0.50.csv"))
@@ -79,6 +79,13 @@ def test_outputs_exist(run):
     # default assumption (barrier on the model TS): the TS does not move with lambda
     at_default = [float(r["Q_TS"]) for r in ts if float(r["q_star"]) == 0.5]
     assert np.ptp(at_default) < 1e-9
+    hm = read(out / "heatmap.csv")
+    assert len(hm) == 5 * 21                                    # --nqts 5, default 21 lambdas
+    ksp = np.array([as_float(r["median_ks_p"]) for r in hm])
+    assert np.all((ksp[np.isfinite(ksp)] > 0) & (ksp[np.isfinite(ksp)] <= 1))
+    # Q‡ columns flagged valid are exactly those before the assumed barrier (model TS here)
+    valid_q = sorted({float(r["qts"]) for r in hm if r["qts_valid"] == "1"})
+    assert valid_q and max(valid_q) < 0.56
 
 
 def test_physics_sanity(run):
