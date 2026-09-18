@@ -441,7 +441,7 @@ def main():
             "lam_stitch", "p_stitch", "geom_status", "lag1_status", "reweight_status",
             "stitch_status", "note"]
     with open(os.path.join(args.out, "summary.csv"), "w", newline="") as fh:
-        wr = csv.writer(fh)
+        wr = csv.writer(fh, lineterminator="\n")
         wr.writerow(cols)
         for r in results:
             wr.writerow([r[c] if isinstance(r[c], str) else f"{r[c]:.6g}" for c in cols])
@@ -487,7 +487,7 @@ def main():
     A, w = ref["A"], ref["w"]
     pos = {i: j for j, i in enumerate(A["idx"])}
     with open(os.path.join(args.out, f"tse_frames_qts{qref:.3f}_qtse{(args.qtse or qref):.3f}.csv"), "w", newline="") as fh:
-        wr = csv.writer(fh)
+        wr = csv.writer(fh, lineterminator="\n")
         wr.writerow(["trajectory", "frame", "time", "k_failed", "weight_at_lambda_star"])
         for i, fr in A["tse"]:
             j = pos[i]
