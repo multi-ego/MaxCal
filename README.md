@@ -87,7 +87,7 @@ Two consequences follow directly.
    each factor gives an i.i.d. Bernoulli(p′) process with
 
 $$
-\operatorname{logit} p' \;=\; \operatorname{logit} p \;-\; \lambda,
+\mathrm{logit}\, p' \;=\; \mathrm{logit}\, p \;-\; \lambda,
 \qquad
 p' \;=\; \frac{p\,e^{-\lambda}}{1-p\,(1-e^{-\lambda})}.
 $$
@@ -162,7 +162,7 @@ The moments of this compound geometric sum are
 $$
 \langle T'\rangle = \frac{1-p'}{p'}\,\mu_C + \mu_S,
 \qquad
-\operatorname{Var}T' = \frac{1-p'}{p'}\,\sigma_C^2 + \frac{1-p'}{p'^2}\,\mu_C^2 + \sigma_S^2 .
+\mathrm{Var}\,T' = \frac{1-p'}{p'}\,\sigma_C^2 + \frac{1-p'}{p'^2}\,\mu_C^2 + \sigma_S^2 .
 $$
 
 As p′ → 0 the second term dominates, CV → 1, and p′T′/μ_C converges in distribution
