@@ -26,7 +26,7 @@ This is the decomposition used in transition interface sampling and forward-flux
 sampling [2, 3]:
 
 $$
-k_{UF} \;=\; \Phi_{U,Q^\ddagger}\;\cdot\;P(Q_f \mid Q^\ddagger),
+k_{UF} = \Phi_{U,Q^\ddagger} \cdot P(Q_f \mid Q^\ddagger),
 $$
 
 the flux of attempts through Q‡ times the probability that an attempt reaches F
@@ -34,7 +34,7 @@ before returning to U. Per trajectory we record the number of failed attempts k_
 and the folding time T_i. The model success probability per attempt is estimated as
 
 $$
-\hat p \;=\; \frac{N_\text{done}}{N_\text{done} + \sum_i k_i}.
+\hat p = \frac{N_\text{done}}{N_\text{done} + \sum_i k_i}.
 $$
 
 ---
@@ -47,7 +47,7 @@ $$
 variables. The reference path measure factorises as
 
 $$
-P(\omega) \;=\; P(\omega \mid Y)\,P(Y),\qquad P(Y)=\prod_j p^{s_j}(1-p)^{1-s_j},
+P(\omega) = P(\omega \mid Y) P(Y),\qquad P(Y)=\prod_j p^{s_j}(1-p)^{1-s_j},
 $$
 
 where Y = (s_1, s_2, …) is the sequence of attempt outcomes (s_j = 1 for success).
@@ -63,8 +63,8 @@ constraints, the one closest to a reference measure P. "Closest" means minimum
 relative path entropy (Kullback–Leibler divergence):
 
 $$
-\min_{P'}\; \sum_\omega P'(\omega)\ln\frac{P'(\omega)}{P(\omega)}
-\quad\text{s.t.}\quad \langle g(Y)\rangle_{P'} = G,\;\; \sum_\omega P'(\omega)=1 .
+\min_{P'} \sum_\omega P'(\omega)\ln\frac{P'(\omega)}{P(\omega)}
+\quad\text{s.t.}\quad \langle g(Y)\rangle_{P'} = G, \sum_\omega P'(\omega)=1 .
 $$
 
 Take as constraint the mean number of successful crossings in a fixed number of
@@ -72,27 +72,27 @@ attempts, g(Y) = Σ_j s_j. This fixes the crossing flux, i.e. the barrier. The
 Lagrangian solution is the exponential tilt
 
 $$
-P'(\omega) \;=\; \frac{1}{Z}\,P(\omega)\,e^{-\lambda\, g(Y)} .
+P'(\omega) = \frac{1}{Z} P(\omega) e^{-\lambda g(Y)} .
 $$
 
 Two consequences follow directly.
 
 1. **Conditionals are untouched.** Because the tilt depends on ω only through Y,
-   P'(ω | Y) = P(ω | Y). Given the outcome of each attempt, the dwell times, excursion
-   shapes and structures are exactly those of the model. This is assumption (A2)
-   derived as the least-biased choice rather than postulated.
+ P'(ω | Y) = P(ω | Y). Given the outcome of each attempt, the dwell times, excursion
+ shapes and structures are exactly those of the model. This is assumption (A2)
+ derived as the least-biased choice rather than postulated.
 
 2. **The outcome process stays Bernoulli, with shifted log-odds.** For an i.i.d.
-   Bernoulli reference, the tilt e^{-λ Σ s_j} factorises over attempts. Normalising
-   each factor gives an i.i.d. Bernoulli(p′) process with
+ Bernoulli reference, the tilt e^{-λ Σ s_j} factorises over attempts. Normalising
+ each factor gives an i.i.d. Bernoulli(p′) process with
 
 $$
-\operatorname{logit} p' \;=\; \operatorname{logit} p \;-\; \lambda,
+\mathrm{logit} p' = \mathrm{logit} p - \lambda,
 \qquad
-p' \;=\; \frac{p\,e^{-\lambda}}{1-p\,(1-e^{-\lambda})}.
+p' = \frac{p e^{-\lambda}}{1-p (1-e^{-\lambda})}.
 $$
 
-   The Lagrange multiplier λ is therefore the shift in log-odds per attempt.
+ The Lagrange multiplier λ is therefore the shift in log-odds per attempt.
 
 **Detailed balance and ΔG.** Counting crossings in both directions tilts U→F and F→U
 attempts by the same factor. In the rare-event limit both rates scale by the same
@@ -105,16 +105,16 @@ probability (1−p)^k p. Under the tilt it has (1−p′)^k p′. The likelihood
 therefore
 
 $$
-w_\text{done}(k) \;\propto\; \Big(\tfrac{1-p'}{1-p}\Big)^{k}\,\frac{p'}{p}
-\;=\; c^{\,k+1}\,e^{-\lambda},
+w_\text{done}(k) \propto \Big(\tfrac{1-p'}{1-p}\Big)^{k} \frac{p'}{p}
+= c^{k+1} e^{-\lambda},
 $$
 
 and for a censored trajectory with k failures and no success
 
 $$
-w_\text{cens}(k) \;\propto\; c^{\,k},
+w_\text{cens}(k) \propto c^{k},
 \qquad
-c \;=\; \frac{1}{1-p\,(1-e^{-\lambda})}.
+c = \frac{1}{1-p (1-e^{-\lambda})}.
 $$
 
 These are the weights computed by `log_weights`. The unit test
@@ -148,8 +148,8 @@ Under (A1) and the conditional invariance of §2.2, a tilted first-passage time 
 sampled directly. Draw
 
 $$
-K \sim \text{Geom}(p') \;\;(\text{failures}),\qquad
-T' \;=\; \sum_{j=1}^{K} C_j \;+\; S,
+K \sim \text{Geom}(p') (\text{failures}),\qquad
+T' = \sum_{j=1}^{K} C_j + S,
 $$
 
 where each C_j is resampled from the pool of observed cycles ("return to U → end of
@@ -160,9 +160,9 @@ it contains the relaxation from the starting structures.
 The moments of this compound geometric sum are
 
 $$
-\langle T'\rangle = \frac{1-p'}{p'}\,\mu_C + \mu_S,
+\langle T'\rangle = \frac{1-p'}{p'} \mu_C + \mu_S,
 \qquad
-\operatorname{Var}T' = \frac{1-p'}{p'}\,\sigma_C^2 + \frac{1-p'}{p'^2}\,\mu_C^2 + \sigma_S^2 .
+\mathrm{Var} T' = \frac{1-p'}{p'} \sigma_C^2 + \frac{1-p'}{p'^2} \mu_C^2 + \sigma_S^2 .
 $$
 
 As p′ → 0 the second term dominates, CV → 1, and p′T′/μ_C converges in distribution
@@ -185,11 +185,11 @@ Evidence for two-state behaviour must come from quantities that thinning cannot
 manufacture:
 
 - **Attempt independence.** Test whether the observed k_i follow a geometric
-  distribution (χ² test) and whether successive cycle durations are uncorrelated
-  (lag-1 Spearman correlation).
+ distribution (χ² test) and whether successive cycle durations are uncorrelated
+ (lag-1 Spearman correlation).
 - **Timescale separation.** Compare the relaxation time within U with the cycle time.
 - **Committor.** Check that committor values on the transition-state surface are
-  peaked around 1/2 [10, 11].
+ peaked around 1/2 [10, 11].
 
 ### 2.7 Interpretation of λ
 
@@ -226,18 +226,18 @@ of exponential statistics follows Salvalaglio *et al.* [16].
 ## 3. Statistics used
 
 - **Survival function.** Weighted Kaplan–Meier estimator [17], handling censored
-  trajectories. Weights act as frequency weights: a weight of 2 is equivalent to
-  duplicating a trajectory, which is unit-tested.
+ trajectories. Weights act as frequency weights: a weight of 2 is equivalent to
+ duplicating a trajectory, which is unit-tested.
 - **Exponential fit.** Maximum-likelihood time constant with censoring,
-  τ̂ = Σ w_i T_i / Σ w_i δ_i, where δ_i = 1 for completed trajectories.
+ τ̂ = Σ w_i T_i / Σ w_i δ_i, where δ_i = 1 for completed trajectories.
 - **Exponentiality test.** Kolmogorov–Smirnov statistic against an exponential with
-  a fitted scale. Because the scale is estimated, standard KS p-values are
-  anti-conservative. The null distribution is simulated once per sample size
-  (Lilliefors [18]); it is scale-free.
+ a fitted scale. Because the scale is estimated, standard KS p-values are
+ anti-conservative. The null distribution is simulated once per sample size
+ (Lilliefors [18]); it is scale-free.
 - **Uncertainty.** Nonparametric bootstrap over trajectories [19] gives confidence
-  intervals on λ*.
+ intervals on λ*.
 - **Stitching test power.** The stitched sample is subsampled to the original N
-  before testing, so the test has the same power as on the original data.
+ before testing, so the test has the same power as on the original data.
 
 ---
 
@@ -246,8 +246,8 @@ of exponential statistics follows Salvalaglio *et al.* [16].
 ```bash
 git clone git@github.com:multi-ego/MaxCal.git
 cd MaxCal
-pip install -e ".[test]"      # installs the maxcal-poisson and maxcal-joint commands
-pytest -q                     # fast tests; add --runslow for the validation tests
+pip install -e ".[test]" # installs the maxcal-poisson and maxcal-joint commands
+pytest -q # fast tests; add --runslow for the validation tests
 ```
 
 The scripts can also be run directly with `python maxcal_poisson.py ...`.
@@ -258,7 +258,7 @@ using the test datasets:
 - the reweighting weights, their saturation, and the resulting CV and N_eff;
 - stitching and the emergence of Poisson statistics;
 - validation against a simulated higher barrier, including what goes wrong with Q‡
-  on the barrier top;
+ on the barrier top;
 - the joint-mode checks (kinetic ΔG, transition-path symmetry across temperatures).
 
 ```bash
@@ -273,7 +273,7 @@ committed outputs:
 
 ```bash
 python maxcal_poisson.py "runs/q_*.xvg" --qu 0.3 --qf 0.8 \
-       --qts 0.40 --qtse 0.55 --out results
+ --qts 0.40 --qtse 0.55 --out results
 ```
 
 Input files contain either one column (Q; give `--dt`) or two columns (time, Q).
@@ -293,8 +293,8 @@ Lines starting with `#` or `@` are ignored, so GROMACS `.xvg` files work directl
 **Outputs**
 
 - `summary.csv`: one row per Q‡, with p̂, geometric-test p, lag-1 correlation, CV,
-  KS p-values, λ* with bootstrap CI, N_eff, stitching threshold, and
-  `cv_stitch0`/`ksp_stitch0` (stitching at λ = 0).
+ KS p-values, λ* with bootstrap CI, N_eff, stitching threshold, and
+ `cv_stitch0`/`ksp_stitch0` (stitching at λ = 0).
 - `tse_frames_*.csv`: TSE frame per completed trajectory, with its weight.
 
 **Status columns.** Every NaN in `summary.csv` comes with a reason code, so it can be
@@ -311,11 +311,11 @@ told apart from a failure of the code.
 **Reading the results**
 
 1. If `geom_p` < α, attempts have memory. Poisson statistics after tilting are then
-   imposed, not recovered.
+ imposed, not recovered.
 2. If stitching at λ = 0 already passes, the original deviation from Poisson was the
-   initial relaxation, not the barrier.
+ initial relaxation, not the barrier.
 3. If CV ≥ 1 at λ = 0, a missing barrier does not explain the deviation; look for
-   intermediates or parallel pathways.
+ intermediates or parallel pathways.
 4. Only Q‡ values on the U side of the barrier region are meaningful (§2.8).
 
 ---
@@ -323,38 +323,38 @@ told apart from a failure of the code.
 ## 5. Tests
 
 ```bash
-pytest -q tests/                  # 46 fast tests (~8 s)
-pytest -q tests/ --runslow        # + 13 validation tests and the demo notebook (~25 s)
-MAXCAL_UPDATE_REF=1 pytest tests/test_regtest.py   # regenerate the reference
+pytest -q tests/ # 46 fast tests (~8 s)
+pytest -q tests/ --runslow # + 13 validation tests and the demo notebook (~25 s)
+MAXCAL_UPDATE_REF=1 pytest tests/test_regtest.py # regenerate the reference
 ```
 
 - **`test_unit.py`**: parsing, attempt counting, tilt identities (§2.2–2.4),
-  Kaplan–Meier, KS/Lilliefors size and power, geometric test, stitching moments
-  (§2.5), and I/O.
+ Kaplan–Meier, KS/Lilliefors size and power, geometric test, stitching moments
+ (§2.5), and I/O.
 - **`test_regtest.py`**: full command-line run on 100 seeded overdamped Langevin
-  trajectories, compared with `tests/regtest/reference_summary.csv`. Deterministic
-  columns use rtol 1e-5; RNG-dependent stitching columns use loose absolute
-  tolerances.
+ trajectories, compared with `tests/regtest/reference_summary.csv`. Deterministic
+ columns use rtol 1e-5; RNG-dependent stitching columns use loose absolute
+ tolerances.
 - **`test_reweight_path.py`**: end-to-end test of the path where reweighting
-  succeeds, which the Langevin data never reach. It uses hand-built trajectories
-  (`tests/synthetic.py`) in which the weighted CV crosses 1 at λ* ≈ 1.1 with
-  N_eff ≈ 115. It checks that:
-  - λ* is finite and bracketed by its bootstrap confidence interval;
-  - N_eff and the KS p-value at λ* are finite;
-  - the weighted CV equals 1 at λ*;
-  - the TSE weight ratio between trajectories with 3 and 0 failures is exactly c³;
-  - every NaN has the right reason code.
+ succeeds, which the Langevin data never reach. It uses hand-built trajectories
+ (`tests/synthetic.py`) in which the weighted CV crosses 1 at λ* ≈ 1.1 with
+ N_eff ≈ 115. It checks that:
+ - λ* is finite and bracketed by its bootstrap confidence interval;
+ - N_eff and the KS p-value at λ* are finite;
+ - the weighted CV equals 1 at λ*;
+ - the TSE weight ratio between trajectories with 3 and 0 failures is exactly c³;
+ - every NaN has the right reason code.
 - The regression test also checks that every NaN in the summary has a non-`ok`
-  reason code, and it compares the reason codes with the reference.
+ reason code, and it compares the reason codes with the reference.
 - **`test_validation.py`**: low-barrier and high-barrier Langevin runs; the high
-  barrier is the low one plus a Gaussian bump of 2 or 3 kT on the barrier top. It
-  checks four things.
-  - The high-barrier ground truth is Poissonian.
-  - Stitching the low-barrier cycles with the true p′ reproduces the high-barrier
-    folding-time distribution: mean within 15% (1–7% observed across seeds), and a
-    two-sample KS test passes.
-  - The blind Poisson threshold is a lower bound on the true λ.
-  - The construction fails, as it should, with Q‡ on the barrier top (§2.8).
+ barrier is the low one plus a Gaussian bump of 2 or 3 kT on the barrier top. It
+ checks four things.
+ - The high-barrier ground truth is Poissonian.
+ - Stitching the low-barrier cycles with the true p′ reproduces the high-barrier
+ folding-time distribution: mean within 15% (1–7% observed across seeds), and a
+ two-sample KS test passes.
+ - The blind Poisson threshold is a lower bound on the true λ.
+ - The construction fails, as it should, with Q‡ on the barrier top (§2.8).
 
 ---
 
@@ -369,9 +369,9 @@ relations between the two directions hold.
 
 The script uses one collective variable (CV) with basins A and B.
 - **If `--qa < --qb`:** A is Q < qa and B is Q ≥ qb, as for native or intermolecular
-  contacts.
+ contacts.
 - **If `--qa > --qb`:** the orientation is reversed automatically, as for a
-  distance: A (unbound) is d > qa, B (bound) is d ≤ qb.
+ distance: A (unbound) is d > qa, B (bound) is d ≤ qb.
 
 All thresholds are given in the original units. Backward runs are analysed in the
 mirrored coordinate −Q, so all of §2 applies unchanged. Each direction has its own
@@ -384,14 +384,14 @@ sits in between, at the barrier top.
 **Detailed balance.** At equilibrium, the rates between core sets satisfy [23, 24]
 
 $$
-\frac{k_{AB}}{k_{BA}} \;=\; \frac{\pi_B}{\pi_A} \;=\; e^{-\beta\Delta G_{AB}},
+\frac{k_{AB}}{k_{BA}} = \frac{\pi_B}{\pi_A} = e^{-\beta\Delta G_{AB}},
 $$
 
 where π_A and π_B are the committor-split populations. The script estimates each
 rate as the inverse of the renewal mean first-passage time of §2.5, k = 1/M, with
 
 $$
-M(p) \;=\; \mu_C\,\frac{1-p}{p} + \mu_S .
+M(p) = \mu_C \frac{1-p}{p} + \mu_S .
 $$
 
 This excludes the initial relaxation. The rates are ratios on the same clock, so the
@@ -400,7 +400,7 @@ scaled time of the model cancels.
 **Kinetic ΔG.** The quantity
 
 $$
-\Delta G_\text{kin} = -kT\ln\!\left(\frac{M_{BA}}{M_{AB}}\right)
+\Delta G_\text{kin} = -kT\ln\left(\frac{M_{BA}}{M_{AB}}\right)
 $$
 
 must equal the equilibrium ΔG for two-state behaviour [25]. It is reported
@@ -413,8 +413,8 @@ removes one of the two multipliers. The script scans the forward tilt λ_f
 (p′_f = tilted p_f) and fixes the backward success probability through
 
 $$
-M'_{BA} = R\,M'_{AB},\qquad
-p'_b = \frac{\mu_{C,B}}{R\,M'_{AB} - \mu_{S,B} + \mu_{C,B}},
+M'_{BA} = R M'_{AB},\qquad
+p'_b = \frac{\mu_{C,B}}{R M'_{AB} - \mu_{S,B} + \mu_{C,B}},
 $$
 
 where R = exp(−βΔG_target). By default ΔG_target is the model's own kinetic value,
@@ -432,7 +432,7 @@ ensemble is the time reverse of the A→B one [11, 26]. Transition paths run fro
 last frame in the starting basin to the first frame in the target. Two consequences
 can be tested using the CV alone:
 - the distributions of transition-path durations must be identical (two-sample KS
-  test);
+ test);
 - the numbers of Q_tse recrossings per path must be identical too.
 
 Under the MaxCal tilt, transition paths are unchanged (§2.2, conditional
@@ -474,7 +474,7 @@ box equilibrium constant is K_box = P_bound/P_unbound = k′_on/k_off, where k�
 the pseudo-first-order rate at [L] = 1/V. The standard binding free energy is [30]
 
 $$
-\Delta G^\circ = \Delta G_\text{box} - kT\ln\!\left(V\,C^\circ\right),
+\Delta G^\circ = \Delta G_\text{box} - kT\ln\left(V C^\circ\right),
 \qquad C^\circ = 1\ \text{M} = 0.6022\ \text{nm}^{-3}.
 $$
 
@@ -489,129 +489,129 @@ missing barrier may be desolvation or induced fit.
 ```bash
 # folding / unfolding at the same temperature, experimental DeltaG imposed
 python maxcal_joint.py --fwd "fold/*.xvg" --bwd "unfold/*.xvg" \
-    --qa 0.3 --qb 0.8 --qts-fwd 0.4 --qts-bwd 0.7 --qtse 0.55 \
-    --temperature-relation same --dG -2.5 --out joint
+ --qa 0.3 --qb 0.8 --qts-fwd 0.4 --qts-bwd 0.7 --qtse 0.55 \
+ --temperature-relation same --dG -2.5 --out joint
 
 # unfolding simulated at a higher temperature
 python maxcal_joint.py --fwd "fold/*.xvg" --bwd "unfold_hot/*.xvg" \
-    --qa 0.3 --qb 0.8 --qts-fwd 0.4 --qts-bwd 0.7 --qtse 0.55 \
-    --temperature-relation different --out joint_hot
+ --qa 0.3 --qb 0.8 --qts-fwd 0.4 --qts-bwd 0.7 --qtse 0.55 \
+ --temperature-relation different --out joint_hot
 
 # binding / unbinding on a distance CV (A = unbound at d > 2.0 nm)
 python maxcal_joint.py --fwd "on/*.xvg" --bwd "off/*.xvg" --system binding \
-    --qa 2.0 --qb 0.6 --qts-fwd 1.4 --qts-bwd 0.8 --qtse 1.0 \
-    --temperature-relation same --dG -8.0 --box-volume 343 --out joint_bind
+ --qa 2.0 --qb 0.6 --qts-fwd 1.4 --qts-bwd 0.8 --qtse 1.0 \
+ --temperature-relation same --dG -8.0 --box-volume 343 --out joint_bind
 ```
 
 **Outputs**
 
 - `joint_summary.json`: per-direction statistics (p, geometric test, CV, KS,
-  renewal mean, mean TP duration and crossings); TP symmetry p-values; kinetic ΔG
-  (box and, for binding, standard); joint or independent λ with the tilted p′ in
-  both directions; the scan; TSE feature comparison; notes.
+ renewal mean, mean TP duration and crossings); TP symmetry p-values; kinetic ΔG
+ (box and, for binding, standard); joint or independent λ with the tilted p′ in
+ both directions; the scan; TSE feature comparison; notes.
 - `tse_forward.csv`, `tse_backward.csv` (frames with weights), and `tse_features.csv`
-  if features are present.
+ if features are present.
 - `survival_joint.png`, `tp_durations.png`, `tse_features.png`.
 
 ### 6.6 Joint-mode tests
 
 - **`test_joint.py`** (fast, 13 tests):
-  - orientation and mirroring;
-  - transition-path extraction and exact time-reversal symmetry of the TSE frame
-    rule;
-  - renewal mean and its inverse;
-  - standard-state conversion;
-  - the detailed-balance constraint holding along the whole scan;
-  - TSE path weighting;
-  - required `--temperature-relation`;
-  - end-to-end runs at the same and at different temperatures;
-  - invariance under reversing the CV (Q vs d = 1.5 − Q);
-  - binding requiring a volume.
+ - orientation and mirroring;
+ - transition-path extraction and exact time-reversal symmetry of the TSE frame
+ rule;
+ - renewal mean and its inverse;
+ - standard-state conversion;
+ - the detailed-balance constraint holding along the whole scan;
+ - TSE path weighting;
+ - required `--temperature-relation`;
+ - end-to-end runs at the same and at different temperatures;
+ - invariance under reversing the CV (Q vs d = 1.5 − Q);
+ - binding requiring a volume.
 - **`test_joint_validation.py`** (slow, 5 tests), on an asymmetric double well
-  (ΔG ≈ −0.6 kT) with a low-barrier model, a 2 kT-bump truth, and a hot backward set:
-  - kinetic ΔG equals the equilibrium committor-split ΔG within 0.3 kT (observed
-    ≤ 0.1 kT);
-  - the detailed-balance coupling predicts the true backward success probability
-    within 25% (observed ≤ 11%) and the backward mean folding time within 20%
-    (observed ≤ 8%);
-  - transition paths are time-reversal symmetric at the same temperature;
-  - a different temperature is detected, and misuse of "same" is flagged.
+ (ΔG ≈ −0.6 kT) with a low-barrier model, a 2 kT-bump truth, and a hot backward set:
+ - kinetic ΔG equals the equilibrium committor-split ΔG within 0.3 kT (observed
+ ≤ 0.1 kT);
+ - the detailed-balance coupling predicts the true backward success probability
+ within 25% (observed ≤ 11%) and the backward mean folding time within 20%
+ (observed ≤ 8%);
+ - transition paths are time-reversal symmetric at the same temperature;
+ - a different temperature is detected, and misuse of "same" is flagged.
 
 ---
 
 ## References
 
 1. Scalone E., Broggini L., Visentin C., Erba D., Bačić Toplek F., Peqini K.,
-   Pellegrino S., Ricagno S., Paissoni C., Camilloni C. "Multi-eGO: An in silico lens
-   to look into protein aggregation kinetics at atomic resolution." *PNAS* **119**,
-   e2203181119 (2022).
+ Pellegrino S., Ricagno S., Paissoni C., Camilloni C. "Multi-eGO: An in silico lens
+ to look into protein aggregation kinetics at atomic resolution." *PNAS* **119**,
+ e2203181119 (2022).
 2. van Erp T. S., Moroni D., Bolhuis P. G. "A novel path sampling method for the
-   calculation of rate constants." *J. Chem. Phys.* **118**, 7762 (2003).
+ calculation of rate constants." *J. Chem. Phys.* **118**, 7762 (2003).
 3. Allen R. J., Warren P. B., ten Wolde P. R. "Sampling rare switching events in
-   biochemical networks." *Phys. Rev. Lett.* **94**, 018104 (2005).
+ biochemical networks." *Phys. Rev. Lett.* **94**, 018104 (2005).
 4. Jaynes E. T. "The minimum entropy production principle." *Annu. Rev. Phys. Chem.*
-   **31**, 579–601 (1980).
+ **31**, 579–601 (1980).
 5. Pressé S., Ghosh K., Lee J., Dill K. A. "Principles of maximum entropy and maximum
-   caliber in statistical physics." *Rev. Mod. Phys.* **85**, 1115–1141 (2013).
+ caliber in statistical physics." *Rev. Mod. Phys.* **85**, 1115–1141 (2013).
 6. Ghosh K., Dixit P. D., Agozzino L., Dill K. A. "The maximum caliber variational
-   principle for nonequilibria." *Annu. Rev. Phys. Chem.* **71**, 213–238 (2020).
+ principle for nonequilibria." *Annu. Rev. Phys. Chem.* **71**, 213–238 (2020).
 7. Kish L. *Survey Sampling*. Wiley, New York (1965).
 8. Rényi A. "A characterization of Poisson processes." *Magyar Tud. Akad. Mat. Kutató
-   Int. Közl.* **1**, 519–527 (1956).
+ Int. Közl.* **1**, 519–527 (1956).
 9. Kalashnikov V. *Geometric Sums: Bounds for Rare Events with Applications*. Kluwer,
-   Dordrecht (1997).
+ Dordrecht (1997).
 10. Du R., Pande V. S., Grosberg A. Yu., Tanaka T., Shakhnovich E. I. "On the
-    transition coordinate for protein folding." *J. Chem. Phys.* **108**, 334 (1998).
+ transition coordinate for protein folding." *J. Chem. Phys.* **108**, 334 (1998).
 11. Bolhuis P. G., Chandler D., Dellago C., Geissler P. L. "Transition path sampling:
-    throwing ropes over rough mountain passes, in the dark." *Annu. Rev. Phys. Chem.*
-    **53**, 291–318 (2002).
+ throwing ropes over rough mountain passes, in the dark." *Annu. Rev. Phys. Chem.*
+ **53**, 291–318 (2002).
 12. Kramers H. A. "Brownian motion in a field of force and the diffusion model of
-    chemical reactions." *Physica* **7**, 284–304 (1940).
+ chemical reactions." *Physica* **7**, 284–304 (1940).
 13. Hänggi P., Talkner P., Borkovec M. "Reaction-rate theory: fifty years after
-    Kramers." *Rev. Mod. Phys.* **62**, 251–341 (1990).
+ Kramers." *Rev. Mod. Phys.* **62**, 251–341 (1990).
 14. Voter A. F. "Hyperdynamics: accelerated molecular dynamics of infrequent events."
-    *Phys. Rev. Lett.* **78**, 3908 (1997).
+ *Phys. Rev. Lett.* **78**, 3908 (1997).
 15. Tiwary P., Parrinello M. "From metadynamics to dynamics." *Phys. Rev. Lett.*
-    **111**, 230602 (2013).
+ **111**, 230602 (2013).
 16. Salvalaglio M., Tiwary P., Parrinello M. "Assessing the reliability of the
-    dynamics reconstructed from metadynamics." *J. Chem. Theory Comput.* **10**,
-    1420–1425 (2014).
+ dynamics reconstructed from metadynamics." *J. Chem. Theory Comput.* **10**,
+ 1420–1425 (2014).
 17. Kaplan E. L., Meier P. "Nonparametric estimation from incomplete observations."
-    *J. Am. Stat. Assoc.* **53**, 457–481 (1958).
+ *J. Am. Stat. Assoc.* **53**, 457–481 (1958).
 18. Lilliefors H. W. "On the Kolmogorov–Smirnov test for the exponential
-    distribution with mean unknown." *J. Am. Stat. Assoc.* **64**, 387–389 (1969).
+ distribution with mean unknown." *J. Am. Stat. Assoc.* **64**, 387–389 (1969).
 19. Efron B. "Bootstrap methods: another look at the jackknife." *Ann. Stat.* **7**,
-    1–26 (1979).
+ 1–26 (1979).
 
 **Related MaxCal approaches to kinetics** (alternatives to the attempt-level tilt used
 here):
 
 20. Dixit P. D., Dill K. A. "Caliber corrected Markov modeling (C2M2): correcting
-    equilibrium Markov models." *J. Chem. Theory Comput.* **14**, 1111–1119 (2018).
+ equilibrium Markov models." *J. Chem. Theory Comput.* **14**, 1111–1119 (2018).
 21. Brotzakis Z. F., Vendruscolo M., Bolhuis P. G. "A method of incorporating rate
-    constants as kinetic constraints in molecular dynamics simulations." *PNAS*
-    **118**, e2012423118 (2021).
+ constants as kinetic constraints in molecular dynamics simulations." *PNAS*
+ **118**, e2012423118 (2021).
 22. Fersht A. R., Matouschek A., Serrano L. "The folding of an enzyme. I. Theory of
-    protein engineering analysis of stability and pathway of protein folding."
-    *J. Mol. Biol.* **224**, 771–782 (1992). (Φ-value analysis, for comparing the TSE
-    with experiment.)
+ protein engineering analysis of stability and pathway of protein folding."
+ *J. Mol. Biol.* **224**, 771–782 (1992). (Φ-value analysis, for comparing the TSE
+ with experiment.)
 
 **Joint mode**
 
 23. Hummer G. "From transition paths to transition states and rate coefficients."
-    *J. Chem. Phys.* **120**, 516–523 (2004).
+ *J. Chem. Phys.* **120**, 516–523 (2004).
 24. E W., Vanden-Eijnden E. "Towards a theory of transition paths."
-    *J. Stat. Phys.* **123**, 503–523 (2006).
+ *J. Stat. Phys.* **123**, 503–523 (2006).
 25. Jackson S. E., Fersht A. R. "Folding of chymotrypsin inhibitor 2. 1. Evidence for
-    a two-state transition." *Biochemistry* **30**, 10428–10435 (1991).
+ a two-state transition." *Biochemistry* **30**, 10428–10435 (1991).
 26. Best R. B., Hummer G. "Reaction coordinates and rates from transition paths."
-    *PNAS* **102**, 6732–6737 (2005).
+ *PNAS* **102**, 6732–6737 (2005).
 27. Hammond G. S. "A correlation of reaction rates." *J. Am. Chem. Soc.* **77**,
-    334–338 (1955).
+ 334–338 (1955).
 28. Leffler J. E. "Parameters for the description of transition states."
-    *Science* **117**, 340–341 (1953).
+ *Science* **117**, 340–341 (1953).
 29. Donati L., Hartmann C., Keller B. G. "Girsanov reweighting for path ensembles and
-    Markov state models." *J. Chem. Phys.* **146**, 244112 (2017).
+ Markov state models." *J. Chem. Phys.* **146**, 244112 (2017).
 30. Gilson M. K., Given J. A., Bush B. L., McCammon J. A. "The statistical-thermodynamic
-    basis for computation of binding affinities: a critical review."
-    *Biophys. J.* **72**, 1047–1069 (1997).
+ basis for computation of binding affinities: a critical review."
+ *Biophys. J.* **72**, 1047–1069 (1997).
