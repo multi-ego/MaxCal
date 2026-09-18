@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "maxcal"
+version = "0.1.0"
+description = "Maximum-caliber correction of underestimated barriers in first-passage trajectories (two-state kinetics, TSE)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.22", "scipy>=1.8", "matplotlib>=3.5"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+maxcal-poisson = "maxcal_poisson:main"
+maxcal-joint = "maxcal_joint:main"
+
+[tool.setuptools]
+py-modules = ["maxcal_poisson", "maxcal_joint"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
