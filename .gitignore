@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.venv/
+venv/
+# analysis outputs
+maxcal_out/
+maxcal_joint_out/
+results/
+*.png
+!docs/**/*.png
