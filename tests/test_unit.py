@@ -231,3 +231,37 @@ def test_status_flags():
     assert m.stitch_status(np.nan, 10, 10, "") == "no_pass"
     assert m.stitch_status(0.5, 10, 10, "success pool <10") == "ok_pool_fallback"
     assert m.stitch_status(0.5, 10, 10, "") == "ok"
+
+
+# ------------------------------------------------------ committor / TS location
+def test_isotonic_pav():
+    y = np.array([0.1, 0.3, 0.2, 0.4]); w = np.array([1.0, 1.0, 1.0, 1.0])
+    np.testing.assert_allclose(m.isotonic(y, w), [0.1, 0.25, 0.25, 0.4])
+    np.testing.assert_allclose(m.isotonic(np.array([0.5, 0.1]), np.array([3.0, 1.0])), [0.4, 0.4])
+
+
+def test_corrected_committor_formula():
+    qm = np.array([0.1, 0.4, 0.6, 0.9])
+    np.testing.assert_allclose(m.corrected_committor(qm, 1.0, 0.5), qm)       # no tilt
+    q = m.corrected_committor(qm, 0.2, 0.5)
+    np.testing.assert_allclose(q[:2], 0.2 * qm[:2])                          # U side scaled
+    np.testing.assert_allclose(1 - q[2:], 0.2 * (1 - qm[2:]))                # F side: return prob scaled
+
+
+def test_ts_location_cases():
+    c = np.linspace(0.3, 0.8, 11); qm = np.linspace(0.0, 1.0, 11)           # linear model committor
+    for r in (1.0, 0.5, 0.1):                                                 # barrier on the model TS:
+        qts, where = m.ts_location(c, qm, r, 0.5)                             # TS never moves
+        assert where == "barrier" and qts == pytest.approx(0.55)
+    qts, where = m.ts_location(c, qm, 0.95, 0.9)                             # weak tilt, far barrier
+    assert where == "U_side" and qts == pytest.approx(0.3 + 0.5 * (0.5 / 0.95))
+    qts, where = m.ts_location(c, qm, 0.95, 0.2)
+    assert where == "F_side" and qts == pytest.approx(0.3 + 0.5 * (1 - 0.5 / 0.95))
+    assert m.ts_location(c, qm, 0.1, 0.9) == (pytest.approx(0.3 + 0.5 * 0.9), "barrier")
+
+
+def test_committor_frames_labels():
+    q = [0.1, 0.4, 0.5, 0.2, 0.35, 0.7, 0.6, 0.1, 0.5, 0.9, 0.2]
+    ti, fr, qv, oc = m.committor_frames([traj(q)], QU, QF)
+    np.testing.assert_array_equal(fr, [1, 2, 4, 5, 6, 8])
+    np.testing.assert_array_equal(oc, [0, 0, 0, 0, 0, 1])

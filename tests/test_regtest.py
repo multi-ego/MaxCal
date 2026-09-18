@@ -66,9 +66,19 @@ def run(tmp_path_factory):
 
 def test_outputs_exist(run):
     out, _ = run
-    for f in ["summary.csv", "survival.png", "lambda_scan.png", "robustness_qts.png"]:
+    for f in ["summary.csv", "survival.png", "lambda_scan.png", "robustness_qts.png",
+              "committor.csv", "ts_location.csv", "ts_location.png"]:
         assert (out / f).exists(), f
     assert list(out.glob("tse_frames_qts*.csv"))
+    assert list(out.glob("tse_committor_lam*_q0.50.csv"))
+    com = read(out / "committor.csv")
+    iso = np.array([as_float(r["q_model_isotonic"]) for r in com])
+    iso = iso[np.isfinite(iso)]
+    assert np.all(np.diff(iso) >= 0) and 0 <= iso.min() and iso.max() <= 1
+    ts = read(out / "ts_location.csv")
+    # default assumption (barrier on the model TS): the TS does not move with lambda
+    at_default = [float(r["Q_TS"]) for r in ts if float(r["q_star"]) == 0.5]
+    assert np.ptp(at_default) < 1e-9
 
 
 def test_physics_sanity(run):
