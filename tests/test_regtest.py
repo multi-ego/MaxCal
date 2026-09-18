@@ -25,6 +25,22 @@ EXACT = ["qts", "N", "n_done", "sum_k", "frac_k0", "p", "geom_p", "cv0", "ks_p0"
          "lam_star", "neff_star", "cv_lammax", "kmax"]
 # stochastic but seeded columns: loose tolerance, robust to RNG-algorithm changes
 LOOSE = {"cv_stitch0": 0.08, "lam_stitch": 0.5}
+# reason codes for NaNs: must match exactly
+STATUS = ["geom_status", "lag1_status", "reweight_status"]
+# stitch_status depends on the stochastic pass/fail near the threshold only through
+# "ok" vs "no_pass"; pool availability is deterministic
+POOL_STATUS = "stitch_status"
+
+
+def check_nan_reasons(row):
+    """Every NaN in a summary row must come with a non-ok reason code."""
+    nan = lambda c: row[c] in ("", "nan")
+    assert nan("geom_p") == (row["geom_status"] != "ok"), row
+    assert nan("lag1_rho") == (row["lag1_status"] != "ok"), row
+    if nan("lam_star"):
+        assert row["reweight_status"] == "no_root", row
+    if nan("lam_stitch"):
+        assert row["stitch_status"] in ("empty_pool", "no_pass"), row
 
 
 def read(path):
@@ -65,6 +81,8 @@ def test_physics_sanity(run):
     assert np.all(np.diff(p) > 0), "success probability must grow as Q‡ approaches Qf"
     ref = rows[len(rows) // 2]
     assert np.isfinite(as_float(ref["lam_stitch"])), "stitching must reach Poisson statistics"
+    for r in rows:
+        check_nan_reasons(r)
     tse = read(next(out.glob("tse_frames_qts*.csv")))
     assert len(tse) == 100
     assert sum(float(t["weight_at_lambda_star"]) for t in tse) == pytest.approx(1.0, abs=1e-4)
@@ -84,6 +102,9 @@ def test_against_reference(run):
         for c in EXACT:
             np.testing.assert_allclose(as_float(g[c]), as_float(e[c]), rtol=1e-5,
                                        atol=1e-9, equal_nan=True, err_msg=f"{c} @ Q‡={e['qts']}")
+        for c in STATUS:
+            assert g[c] == e[c], f"{c} @ Q‡={e['qts']}: {g[c]} != {e[c]}"
+        assert (g[POOL_STATUS] == "empty_pool") == (e[POOL_STATUS] == "empty_pool")
         for c, tol in LOOSE.items():
             np.testing.assert_allclose(as_float(g[c]), as_float(e[c]), atol=tol,
                                        equal_nan=True, err_msg=f"{c} @ Q‡={e['qts']}")

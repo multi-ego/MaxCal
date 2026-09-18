@@ -1,0 +1,3 @@
+# keep text files with LF endings in the repository on every platform
+* text=auto eol=lf
+*.png binary

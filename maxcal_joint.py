@@ -51,9 +51,7 @@ import warnings
 import numpy as np
 from scipy import stats
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt   # backend set to Agg in main(), not at import
 
 import maxcal_poisson as mp
 
@@ -507,6 +505,7 @@ def report(res):
 
 
 def main(argv=None):
+    plt.switch_backend("Agg")        # command-line use: files only, no display
     args = parse_args(argv)
     res, F, B, feat_table, pplot, rng = analyse(args)
     write_outputs(args, res, F, B, feat_table, pplot, rng)
