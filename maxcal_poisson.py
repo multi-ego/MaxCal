@@ -290,6 +290,41 @@ def stitch_scan(lams, p, A, n_sub_size, args, rng):
     return lam_pass, res
 
 
+# ------------------------------------------------------------------ status flags
+# Every NaN in summary.csv comes with a reason in one of these columns.
+def geom_status(n, pval):
+    if n < 10:
+        return "too_few_trajectories"
+    return "too_few_bins" if not np.isfinite(pval) else "ok"
+
+
+def lag1_status(pairs):
+    """pairs: (n, 2) array of consecutive failure-cycle durations within trajectories."""
+    if len(pairs) < 10:
+        return "too_few_pairs"
+    if np.ptp(pairs[:, 0]) == 0 or np.ptp(pairs[:, 1]) == 0:
+        return "constant_cycles"         # correlation undefined
+    return "ok"
+
+
+def reweight_status(cv0, lam_star, neff, neff_min):
+    if cv0 >= 1:
+        return "cv_ge_1_at_lambda0"      # already over-dispersed: a missing barrier can't explain it
+    if not np.isfinite(lam_star):
+        return "no_root"                 # CV never reaches 1: observed attempt counts too few
+    if not neff >= neff_min:
+        return "low_neff"
+    return "ok"
+
+
+def stitch_status(lam_stitch, n_fail_pool, n_succ_pool, pool_note):
+    if n_fail_pool == 0 or n_succ_pool == 0:
+        return "empty_pool"              # no failed attempts past this Q‡ (at/after the barrier?)
+    if not np.isfinite(lam_stitch):
+        return "no_pass"
+    return "ok_pool_fallback" if pool_note else "ok"   # fallback: initial segments were used
+
+
 # --------------------------------------------------------------------------- main
 def analyse(trajs, qts, args, rng, lams, full=False):
     A = attempts(trajs, qts, args.t0, args.include_initial, args.qtse)
@@ -299,9 +334,11 @@ def analyse(trajs, qts, args, rng, lams, full=False):
                frac_k0=float(np.mean(k[done] == 0)) if done.any() else np.nan, p=p,
                note=A["note"])
     out["geom_p"], out["geom_bins"] = geometric_test(k[done])
+    out["geom_status"] = geom_status(int(done.sum()), out["geom_p"])
     pr = A["pairs"]
+    out["lag1_status"] = lag1_status(pr)
     out["lag1_rho"], out["lag1_p"] = (stats.spearmanr(pr[:, 0], pr[:, 1])
-                                      if len(pr) >= 10 else (np.nan, np.nan))
+                                      if out["lag1_status"] == "ok" else (np.nan, np.nan))
 
     cv, neff = cv_curve(lams, k, T, done, p)
     lam_star = first_crossing(lams, cv)
@@ -332,9 +369,12 @@ def analyse(trajs, qts, args, rng, lams, full=False):
     out["lam_lo"], out["lam_hi"] = (np.percentile(fin, [2.5, 97.5]) if fin.size
                                     else (np.nan, np.nan))
     out["boot_noroot"] = float(np.mean(~np.isfinite(boots))) if boots.size else np.nan
+    out["reweight_status"] = reweight_status(out["cv0"], lam_star, out["neff_star"], args.neff_min)
 
     lam_st, st_res = stitch_scan(lams, p, A, k.size, args, rng)
     out["lam_stitch"] = lam_st
+    out["stitch_status"] = stitch_status(lam_st, A["fail_pool"].size, A["succ_pool"].size,
+                                         A["note"])
     out["cv_stitch0"], out["ksp_stitch0"] = (st_res[0][1], st_res[0][2]) if st_res else (np.nan, np.nan)
     out["cv_lammax"] = cv[-1]
     out["kmax"] = int(k.max()) if k.size else 0
@@ -399,7 +439,8 @@ def main():
     cols = ["qts", "N", "n_done", "sum_k", "frac_k0", "p", "geom_p", "lag1_rho", "lag1_p",
             "cv0", "ks_p0", "lam_star", "lam_lo", "lam_hi", "boot_noroot", "neff_star",
             "ks_p_star", "reweight_ok", "cv_lammax", "kmax", "cv_stitch0", "ksp_stitch0",
-            "lam_stitch", "p_stitch", "note"]
+            "lam_stitch", "p_stitch", "geom_status", "lag1_status", "reweight_status",
+            "stitch_status", "note"]
     with open(os.path.join(args.out, "summary.csv"), "w", newline="") as fh:
         wr = csv.writer(fh)
         wr.writerow(cols)
@@ -415,7 +456,9 @@ def main():
               f"{r['lam_stitch']:8.2f}" + ("  *ref" if r is ref else ""))
 
     # ---- warnings for the reference surface
-    print(f"\nReference Q‡ = {qref:.3f}")
+    print(f"\nReference Q‡ = {qref:.3f}  [geometric test: {ref['geom_status']}, "
+          f"lag-1: {ref['lag1_status']}, reweighting: {ref['reweight_status']}, "
+          f"stitching: {ref['stitch_status']}]")
     if ref["note"]:
         print("  " + ref["note"])
     if np.isfinite(ref["geom_p"]) and ref["geom_p"] < args.alpha:

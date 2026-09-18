@@ -277,6 +277,16 @@ Lines starting with `#` or `@` are ignored, so GROMACS `.xvg` files work directl
   KS p-values, λ* with bootstrap CI, N_eff, stitching threshold, and
   `cv_stitch0`/`ksp_stitch0` (stitching at λ = 0).
 - `tse_frames_*.csv`: TSE frame per completed trajectory, with its weight.
+
+**Status columns.** Every NaN in `summary.csv` comes with a reason code, so it can be
+told apart from a failure of the code.
+
+| column | values |
+|---|---|
+| `geom_status` | `ok`; `too_few_trajectories` (fewer than 10 completed); `too_few_bins` (too few distinct k for the χ² test) |
+| `lag1_status` | `ok`; `too_few_pairs` (fewer than 10 consecutive failure cycles); `constant_cycles` (correlation undefined) |
+| `reweight_status` | `ok`; `no_root` (weighted CV never reaches 1, §2.4); `low_neff` (N_eff below `--neff-min`); `cv_ge_1_at_lambda0` (already over-dispersed: a missing barrier does not explain the deviation) |
+| `stitch_status` | `ok`; `ok_pool_fallback` (initial segments had to be used); `no_pass` (Poisson criterion never met in the scan); `empty_pool` (no failed attempts past this Q‡, typically at or beyond the barrier) |
 - `survival.png`, `lambda_scan.png`, `robustness_qts.png`.
 
 **Reading the results**
@@ -294,7 +304,7 @@ Lines starting with `#` or `@` are ignored, so GROMACS `.xvg` files work directl
 ## 5. Tests
 
 ```bash
-pytest -q tests/                  # 41 fast tests (~8 s)
+pytest -q tests/                  # 46 fast tests (~8 s)
 pytest -q tests/ --runslow        # + 13 validation tests against known answers (~15 s)
 MAXCAL_UPDATE_REF=1 pytest tests/test_regtest.py   # regenerate the reference
 ```
@@ -306,6 +316,17 @@ MAXCAL_UPDATE_REF=1 pytest tests/test_regtest.py   # regenerate the reference
   trajectories, compared with `tests/regtest/reference_summary.csv`. Deterministic
   columns use rtol 1e-5; RNG-dependent stitching columns use loose absolute
   tolerances.
+- **`test_reweight_path.py`**: end-to-end test of the path where reweighting
+  succeeds, which the Langevin data never reach. It uses hand-built trajectories
+  (`tests/synthetic.py`) in which the weighted CV crosses 1 at λ* ≈ 1.1 with
+  N_eff ≈ 115. It checks that:
+  - λ* is finite and bracketed by its bootstrap confidence interval;
+  - N_eff and the KS p-value at λ* are finite;
+  - the weighted CV equals 1 at λ*;
+  - the TSE weight ratio between trajectories with 3 and 0 failures is exactly c³;
+  - every NaN has the right reason code.
+- The regression test also checks that every NaN in the summary has a non-`ok`
+  reason code, and it compares the reason codes with the reference.
 - **`test_validation.py`**: low-barrier and high-barrier Langevin runs; the high
   barrier is the low one plus a Gaussian bump of 2 or 3 kT on the barrier top. It
   checks four things.

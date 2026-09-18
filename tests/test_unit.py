@@ -213,3 +213,21 @@ def test_load_one_column_needs_dt(tmp_path):
     with pytest.raises(SystemExit):
         m.load_traj(str(f), None)
     assert m.load_traj(str(f), 2.0)[1] == 2.0
+
+
+# ---------------------------------------------------------------- status flags
+def test_status_flags():
+    assert m.geom_status(5, 0.3) == "too_few_trajectories"
+    assert m.geom_status(50, np.nan) == "too_few_bins"
+    assert m.geom_status(50, 0.3) == "ok"
+    assert m.lag1_status(np.zeros((3, 2))) == "too_few_pairs"
+    assert m.lag1_status(np.ones((20, 2))) == "constant_cycles"
+    assert m.lag1_status(np.random.default_rng(0).random((20, 2))) == "ok"
+    assert m.reweight_status(1.2, 0.0, 100, 30) == "cv_ge_1_at_lambda0"
+    assert m.reweight_status(0.8, np.nan, np.nan, 30) == "no_root"
+    assert m.reweight_status(0.8, 1.0, 10, 30) == "low_neff"
+    assert m.reweight_status(0.8, 1.0, 100, 30) == "ok"
+    assert m.stitch_status(0.5, 0, 10, "") == "empty_pool"
+    assert m.stitch_status(np.nan, 10, 10, "") == "no_pass"
+    assert m.stitch_status(0.5, 10, 10, "success pool <10") == "ok_pool_fallback"
+    assert m.stitch_status(0.5, 10, 10, "") == "ok"
