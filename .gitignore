@@ -12,3 +12,4 @@ maxcal_joint_out/
 results/
 *.png
 !docs/**/*.png
+notebooks/.cache/
