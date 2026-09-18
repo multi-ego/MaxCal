@@ -288,6 +288,87 @@ def stitch_scan(lams, p, A, n_sub_size, args, rng):
     return lam_pass, res
 
 
+# ------------------------------------------------------- committor and TS location
+# The tilt fixes how much barrier is missing (p'/p) but not WHERE it sits.  For a
+# narrow missing barrier on a model isocommittor surface q_m = q* (README §2.10) the
+# corrected committor is, exactly for diffusive dynamics away from the barrier,
+#     q'(x) = r q_m(x)                 on the U side  (q_m < q*)
+#     q'(x) = 1 - r (1 - q_m(x))       on the F side  (q_m > q*),     r = p'/p,
+# so the transition state moves to the barrier location whenever the jump across it
+# straddles 1/2.  q* (the barrier location) is an assumption, not an output.
+
+def committor_frames(trajs, qu, qf):
+    """Frames inside excursions out of U, labelled by the outcome of their excursion
+    (1 = reaches Qf before returning below Qu).  For a frame x this outcome is a
+    sample of the committor q(x).  Returns arrays (traj index, frame, Q, outcome)."""
+    ti, fr, qq, oo = [], [], [], []
+    for i, tr in enumerate(trajs):
+        q, F = tr["q"], tr["fails"]
+        for s, e, _ in F:
+            s, e = int(s), int(e)
+            idx = np.arange(s, e)
+            ti.append(np.full(idx.size, i)); fr.append(idx); qq.append(q[idx]); oo.append(np.zeros(idx.size))
+        f = tr["fold"]
+        if f is not None:
+            inU = np.flatnonzero(q[:f] < qu)
+            s = inU[-1] + 1 if inU.size else 0
+            idx = np.arange(s, f)
+            ti.append(np.full(idx.size, i)); fr.append(idx); qq.append(q[idx]); oo.append(np.ones(idx.size))
+    cat = lambda a, dt: np.concatenate(a).astype(dt) if a else np.zeros(0, dt)
+    return cat(ti, int), cat(fr, int), cat(qq, float), cat(oo, float)
+
+
+def isotonic(y, w):
+    """Weighted non-decreasing fit (pool-adjacent-violators)."""
+    blocks = []                                  # [value, weight, length]
+    for yi, wi in zip(y, w):
+        blocks.append([yi, wi, 1])
+        while len(blocks) > 1 and blocks[-2][0] > blocks[-1][0]:
+            v2, w2, n2 = blocks.pop(); v1, w1, n1 = blocks.pop()
+            wt = w1 + w2
+            blocks.append([(v1 * w1 + v2 * w2) / wt if wt > 0 else 0.5 * (v1 + v2), wt, n1 + n2])
+    return np.concatenate([np.full(n, v) for v, _, n in blocks])
+
+
+def committor_profile(qvals, outcome, qu, qf, nbins):
+    edges = np.linspace(qu, qf, nbins + 1)
+    b = np.clip(np.digitize(qvals, edges) - 1, 0, nbins - 1)
+    n = np.bincount(b, minlength=nbins).astype(float)
+    s = np.bincount(b, weights=outcome, minlength=nbins)
+    raw = np.where(n > 0, s / np.maximum(n, 1), np.nan)
+    ok = n > 0
+    iso = np.full(nbins, np.nan)
+    iso[ok] = isotonic(raw[ok], n[ok])
+    return 0.5 * (edges[1:] + edges[:-1]), n, raw, iso
+
+
+def corrected_committor(qm, r, qstar):
+    qm = np.asarray(qm, float)
+    return np.where(qm < qstar, r * qm, 1.0 - r * (1.0 - qm))
+
+
+def q_at(centers, q_iso, level):
+    """Q where the (monotone) model committor reaches `level` (linear interpolation)."""
+    ok = np.isfinite(q_iso)
+    c, q = centers[ok], q_iso[ok]
+    if q.size == 0 or level < q[0] or level > q[-1]:
+        return np.nan
+    j = np.flatnonzero(q >= level)[0]
+    if j == 0 or q[j] == q[j - 1]:
+        return c[j]
+    return c[j - 1] + (level - q[j - 1]) * (c[j] - c[j - 1]) / (q[j] - q[j - 1])
+
+
+def ts_location(centers, q_iso, r, qstar):
+    """Location of the corrected transition state q' = 1/2, and which part of the
+    corrected committor puts it there ('barrier', 'U_side', 'F_side')."""
+    if r * qstar <= 0.5 <= 1.0 - r * (1.0 - qstar):
+        return q_at(centers, q_iso, qstar), "barrier"      # the jump straddles 1/2
+    if r * qstar > 0.5:                                       # reached 1/2 before the barrier
+        return q_at(centers, q_iso, 0.5 / r), "U_side"
+    return q_at(centers, q_iso, 1.0 - 0.5 / r), "F_side"
+
+
 # ------------------------------------------------------------------ status flags
 # Every NaN in summary.csv comes with a reason in one of these columns.
 def geom_status(n, pval):
@@ -382,6 +463,152 @@ def analyse(trajs, qts, args, rng, lams, full=False):
     return out
 
 
+def ks_heatmap(trajs, qts_grid, lams, args, rng):
+    """Median stitched KS p-value and CV on a (Q‡, lambda) grid.  Each cell stitches
+    args.nstitch folding times with the tilted success probability at that Q‡ and
+    tests subsamples of the original size, exactly as stitch_scan does."""
+    ksp = np.full((qts_grid.size, lams.size), np.nan)
+    cv = np.full_like(ksp, np.nan)
+    for i, q in enumerate(qts_grid):
+        A = attempts(trajs, q, args.t0, args.include_initial)
+        if A["fail_pool"].size == 0 or A["succ_pool"].size == 0:
+            continue                                          # empty_pool: NaN column
+        p = success_prob(A["k"], A["done"])
+        n = A["k"].size
+        null = null_D(n)
+        for j, lam in enumerate(lams):
+            pp = tilted_p(p, lam)
+            if (1 - pp) / pp > 1e7:
+                break
+            t = stitch(pp, A["fail_pool"], A["succ_pool"], args.nstitch, rng)
+            sub = rng.choice(t, size=(args.nsub, n))
+            pv = (np.sum(null[None, :] >= D_rows(sub)[:, None], axis=1) + 1) / (null.size + 1)
+            ksp[i, j], cv[i, j] = np.median(pv), t.std() / t.mean()
+    return ksp, cv
+
+
+def write_heatmap(qts_grid, lams, ksp, cv, results, com, args):
+    passed = (ksp >= args.alpha) & (np.abs(cv - 1) <= args.cv_tol)
+    with open(os.path.join(args.out, "heatmap.csv"), "w", newline="") as fh:
+        wr = csv.writer(fh, lineterminator="\n")
+        wr.writerow(["qts", "lambda", "median_ks_p", "cv", "poisson_pass", "qts_valid"])
+        for i, q in enumerate(qts_grid):
+            valid = bool(q < com["Q_barrier"]) if np.isfinite(com["Q_barrier"]) else True
+            for j, lam in enumerate(lams):
+                wr.writerow([f"{q:.4g}", f"{lam:.4g}", f"{ksp[i, j]:.4g}", f"{cv[i, j]:.4g}",
+                             int(passed[i, j]), int(valid)])
+
+    from matplotlib.colors import LogNorm
+    fig, ax = plt.subplots(figsize=(7.5, 4.8))
+    dq = np.diff(qts_grid).min() if qts_grid.size > 1 else 0.05
+    dl = np.diff(lams).min() if lams.size > 1 else 0.5
+    qe = np.r_[qts_grid - dq / 2, qts_grid[-1] + dq / 2]
+    le = np.r_[lams - dl / 2, lams[-1] + dl / 2]
+    im = ax.pcolormesh(qe, le, np.clip(ksp.T, 1e-4, 1), norm=LogNorm(1e-4, 1), cmap="viridis",
+                       shading="flat")
+    fig.colorbar(im, ax=ax, label="median KS p (stitched)")
+    from matplotlib.patches import Rectangle
+    for i, j in zip(*np.nonzero(passed)):                     # hatch exactly the passing cells
+        ax.add_patch(Rectangle((qe[i], le[j]), qe[i + 1] - qe[i], le[j + 1] - le[j], fill=False,
+                               hatch="//", edgecolor="white", lw=0, alpha=0.7))
+    lm = [r["lam_stitch"] for r in results]
+    ax.plot([r["qts"] for r in results], lm, "w^-", ms=6, mec="k", label="λ_min(Q‡)")
+    if np.isfinite(com["Q_barrier"]):
+        ax.axvspan(com["Q_barrier"], qe[-1], color="0.2", alpha=0.45, lw=0,
+                   label=f"Q‡ beyond assumed barrier (q*={args.barrier_q:.2f}): invalid")
+        ax.axvline(com["Q_barrier"], color="k", lw=1)
+    ax.set_xlim(qe[0], qe[-1]); ax.set_ylim(le[0], le[-1])
+    ax.set_xlabel("attempt interface Q‡"); ax.set_ylabel("λ (kT)")
+    ax.set_title("Poisson decision map: hatched = passes (KS p ≥ α and |CV−1| ≤ tol)\n"
+                 "the TS lies between Q‡ and Qf, so only Q‡ before the barrier is meaningful",
+                 fontsize=9)
+    ax.legend(fontsize=7, loc="upper left")
+    fig.tight_layout(); fig.savefig(os.path.join(args.out, "heatmap.png"), dpi=150); plt.close(fig)
+    return passed
+
+
+def committor_tse(trajs, ref, qref, args):
+    """Model committor along Q, corrected committor and TS location for a set of lambda
+    values and barrier locations q*, TSE frames at the chosen --barrier-q."""
+    ti, fr, qv, oc = committor_frames(trajs, args.qu, args.qf)
+    centers, n, raw, iso = committor_profile(qv, oc, args.qu, args.qf, args.committor_bins)
+    with open(os.path.join(args.out, "committor.csv"), "w", newline="") as fh:
+        wr = csv.writer(fh, lineterminator="\n")
+        wr.writerow(["Q", "n_frames", "q_model_raw", "q_model_isotonic"])
+        for row in zip(centers, n, raw, iso):
+            wr.writerow([f"{v:.6g}" for v in row])
+
+    p = ref["p"]
+    lam_min = ref["lam_stitch"]
+    if args.tse_lams:
+        lams = list(args.tse_lams)
+    else:
+        base = lam_min if np.isfinite(lam_min) else 0.0
+        lams = [base, base + 1.0, base + 2.0]
+    # model committor at the attempt interface: the barrier must lie beyond it
+    ok = np.isfinite(iso)
+    q_iface = float(np.interp(qref, centers[ok], iso[ok])) if ok.any() else np.nan
+    qstars = np.round(np.arange(0.1, 0.91, 0.05), 3)
+    half = args.tse_window if args.tse_window else (args.qf - args.qu) / args.committor_bins
+
+    with open(os.path.join(args.out, "ts_location.csv"), "w", newline="") as fh:
+        wr = csv.writer(fh, lineterminator="\n")
+        wr.writerow(["lambda", "r=p'/p", "q_star", "Q_barrier", "Q_TS", "ts_set_by", "status"])
+        for lam in lams:
+            r = tilted_p(p, lam) / p
+            for qs in sorted(set(qstars) | {args.barrier_q}):
+                qb = q_at(centers, iso, qs)
+                qts, where = ts_location(centers, iso, r, qs)
+                status = ("barrier_before_interface" if qs < q_iface else
+                          "ts_outside_sampled_range" if not np.isfinite(qts) else
+                          "ts_before_interface" if qts <= qref else "ok")
+                wr.writerow([f"{lam:.4g}", f"{r:.4g}", f"{qs:.3g}", f"{qb:.4g}", f"{qts:.4g}",
+                             where, status])
+
+    print(f"\nCommittor-based TSE (missing barrier at model q* = {args.barrier_q:.2f}, "
+          f"Q = {q_at(centers, iso, args.barrier_q):.3f}; model TS q=0.5 at Q = "
+          f"{q_at(centers, iso, 0.5):.3f}):")
+    if args.barrier_q < q_iface:
+        print(f"  WARNING: q* = {args.barrier_q} lies before the attempt interface "
+              f"(model q = {q_iface:.2f} at Q‡); the tilt assumes the barrier is beyond Q‡.")
+    for lam in lams:
+        r = tilted_p(p, lam) / p
+        qts, where = ts_location(centers, iso, r, args.barrier_q)
+        sel = np.abs(qv - qts) <= half if np.isfinite(qts) else np.zeros(qv.size, bool)
+        name = f"tse_committor_lam{lam:.2f}_q{args.barrier_q:.2f}.csv"
+        with open(os.path.join(args.out, name), "w", newline="") as fh:
+            wr = csv.writer(fh, lineterminator="\n")
+            wr.writerow(["trajectory", "frame", "time", "Q", "excursion_outcome"])
+            for i, f_, q_, o_ in zip(ti[sel], fr[sel], qv[sel], oc[sel]):
+                wr.writerow([trajs[i]["path"], f_, f"{f_ * trajs[i]['dt']:.6g}", f"{q_:.6g}", int(o_)])
+        print(f"  lambda = {lam:.2f}  (p'/p = {r:.3f}):  Q_TS = {qts:.3f}  set by {where:8s} "
+              f"-> {int(sel.sum())} frames in {name}")
+
+    fig, axs = plt.subplots(1, 2, figsize=(11, 4))
+    axs[0].plot(centers, raw, "o", ms=3, color="0.5", label="model (raw)")
+    axs[0].plot(centers, iso, "k-", label="model (isotonic)")
+    grid = np.linspace(args.qu, args.qf, 400)
+    qm_grid = np.interp(grid, centers[ok], iso[ok])
+    for lam in lams:
+        r = tilted_p(p, lam) / p
+        axs[0].plot(grid, corrected_committor(qm_grid, r, args.barrier_q), label=f"corrected, λ={lam:.2f}")
+    axs[0].axhline(0.5, color="k", ls=":", lw=1); axs[0].axvline(qref, color="r", ls=":", lw=1, label="Q‡")
+    axs[0].set_xlabel("Q"); axs[0].set_ylabel("committor"); axs[0].legend(fontsize=8)
+    axs[0].set_title(f"missing barrier at model q* = {args.barrier_q:.2f}")
+    for lam in lams:
+        r = tilted_p(p, lam) / p
+        axs[1].plot(qstars, [ts_location(centers, iso, r, qs)[0] for qs in qstars], "o-", ms=3,
+                    label=f"λ = {lam:.2f}")
+    axs[1].plot(qstars, [q_at(centers, iso, qs) for qs in qstars], "k--", lw=1, label="barrier location")
+    axs[1].axvspan(0, q_iface, color="0.9", label="before Q‡ (not allowed)")
+    axs[1].set_xlim(qstars[0], qstars[-1])
+    axs[1].set_xlabel("assumed barrier location q* (model committor)"); axs[1].set_ylabel("Q_TS")
+    axs[1].set_title("TS location vs assumed barrier location"); axs[1].legend(fontsize=8)
+    fig.tight_layout(); fig.savefig(os.path.join(args.out, "ts_location.png"), dpi=150); plt.close(fig)
+    return dict(centers=centers, iso=iso, q_iface=q_iface,
+                Q_barrier=q_at(centers, iso, args.barrier_q), Q_model_ts=q_at(centers, iso, 0.5))
+
+
 def main():
     plt.switch_backend("Agg")        # command-line use: files only, no display
     ap = argparse.ArgumentParser(description=__doc__,
@@ -403,6 +630,19 @@ def main():
     ap.add_argument("--alpha", type=float, default=0.05)
     ap.add_argument("--cv-tol", type=float, default=0.1)
     ap.add_argument("--neff-min", type=float, default=30.0)
+    ap.add_argument("--barrier-q", type=float, default=0.5,
+                    help="location of the missing barrier, as a MODEL committor value q* "
+                         "(default 0.5: the missing barrier sits on the model's own TS)")
+    ap.add_argument("--tse-lams", type=float, nargs="*", default=None,
+                    help="lambda values for the committor-based TSE (default: lambda_min, "
+                         "lambda_min+1, lambda_min+2)")
+    ap.add_argument("--committor-bins", type=int, default=20)
+    ap.add_argument("--heatmap-nlam", type=int, default=21,
+                    help="number of lambda values in the (Q‡, lambda) KS heatmap (0 disables)")
+    ap.add_argument("--heatmap-lam-max", type=float, default=5.0,
+                    help="largest lambda (kT) in the heatmap")
+    ap.add_argument("--tse-window", type=float, default=None,
+                    help="half-width in Q of the TSE window around Q_TS (default: one bin)")
     ap.add_argument("--include-initial", action="store_true",
                     help="use first segment of each trajectory in stitching pools")
     ap.add_argument("--out", default="maxcal_out")
@@ -542,7 +782,20 @@ def main():
     ax.legend(fontsize=8); fig.tight_layout()
     fig.savefig(os.path.join(args.out, "robustness_qts.png"), dpi=150); plt.close(fig)
 
-    print(f"\nWrote summary.csv, tse_frames_*.csv, survival.png, "
+    com = committor_tse(trajs, ref, qref, args)
+    if qref >= com["Q_barrier"]:
+        print(f"  WARNING: reference Q‡ = {qref:.3f} is not before the assumed barrier "
+              f"(Q = {com['Q_barrier']:.3f}); the TS must lie between Q‡ and Qf.")
+    if args.heatmap_nlam > 0:
+        lams_h = np.linspace(0.0, args.heatmap_lam_max, args.heatmap_nlam)
+        ksp, cvh = ks_heatmap(trajs, grid, lams_h, args, rng)
+        passed = write_heatmap(grid, lams_h, ksp, cvh, results, com, args)
+        valid = grid < com["Q_barrier"] if np.isfinite(com["Q_barrier"]) else np.ones(grid.size, bool)
+        print(f"\n(Q‡, λ) heatmap: {int(passed[valid].sum())}/{int(passed[valid].size)} cells pass "
+              f"among the {int(valid.sum())} Q‡ values before the assumed barrier -> heatmap.png")
+
+    print(f"\nWrote summary.csv, heatmap.csv/.png, tse_frames_*.csv, committor.csv, ts_location.csv, "
+          f"tse_committor_*.csv, ts_location.png, survival.png, "
           f"lambda_scan.png, robustness_qts.png to {args.out}/")
 
 
