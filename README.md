@@ -252,6 +252,25 @@ pytest -q                     # fast tests; add --runslow for the validation tes
 
 The scripts can also be run directly with `python maxcal_poisson.py ...`.
 
+**Demo notebook.** `notebooks/demo.ipynb` walks through the method interactively,
+using the test datasets:
+- attempt counting as Q‡ moves;
+- the reweighting weights, their saturation, and the resulting CV and N_eff;
+- stitching and the emergence of Poisson statistics;
+- validation against a simulated higher barrier, including what goes wrong with Q‡
+  on the barrier top;
+- the joint-mode checks (kinetic ΔG, transition-path symmetry across temperatures).
+
+```bash
+pip install -e ".[demo]"
+jupyter lab notebooks/demo.ipynb
+```
+
+The committed copy is rendered with static figures, so it can be read on GitHub.
+The sliders appear when you run it live with `ipywidgets` installed. To refresh the
+committed outputs:
+`MAXCAL_DEMO_STATIC=1 jupyter nbconvert --to notebook --execute --inplace notebooks/demo.ipynb`.
+
 ```bash
 python maxcal_poisson.py "runs/q_*.xvg" --qu 0.3 --qf 0.8 \
        --qts 0.40 --qtse 0.55 --out results
@@ -305,7 +324,7 @@ told apart from a failure of the code.
 
 ```bash
 pytest -q tests/                  # 46 fast tests (~8 s)
-pytest -q tests/ --runslow        # + 13 validation tests against known answers (~15 s)
+pytest -q tests/ --runslow        # + 13 validation tests and the demo notebook (~25 s)
 MAXCAL_UPDATE_REF=1 pytest tests/test_regtest.py   # regenerate the reference
 ```
 

@@ -25,4 +25,4 @@ jobs:
       - name: Fast tests (unit + regression)
         run: pytest -q
       - name: Validation tests
-        run: pytest -q --runslow tests/test_validation.py tests/test_joint_validation.py
+        run: pytest -q --runslow tests/test_validation.py tests/test_joint_validation.py tests/test_notebook.py

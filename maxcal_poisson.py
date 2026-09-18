@@ -48,9 +48,7 @@ import numpy as np
 from scipy import stats
 from scipy.special import logsumexp
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt   # backend set to Agg in main(), not at import
 
 
 # ----------------------------------------------------------------------------- I/O
@@ -385,6 +383,7 @@ def analyse(trajs, qts, args, rng, lams, full=False):
 
 
 def main():
+    plt.switch_backend("Agg")        # command-line use: files only, no display
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("files", nargs="+", help="trajectory files or glob patterns")
