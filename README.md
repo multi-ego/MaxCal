@@ -1,4 +1,4 @@
-# maxcal_poisson
+# maxcal
 
 Maximum-caliber (MaxCal) correction of an underestimated folding barrier in
 first-passage trajectories, with the aim of recovering two-state (Poisson) kinetics
@@ -335,11 +335,23 @@ exact to about 10⁻⁴ away from the bump (`tests/test_committor.py`).
 ```bash
 git clone git@github.com:multi-ego/MaxCal.git
 cd MaxCal
-pip install -e ".[test]"      # installs the maxcal-poisson and maxcal-joint commands
+pip install -e ".[test]"
 pytest -q                     # fast tests; add --runslow for the validation tests
 ```
 
-The scripts can also be run directly with `python maxcal_poisson.py ...`.
+The code is the package `maxcal`; one executable per step, all sharing `maxcal/core.py`
+(trajectory parsing, attempt counting, the tilt, survival/KS statistics, status codes):
+
+| command | module | what it does |
+|---|---|---|
+| `maxcal-stitch` | `maxcal/stitching.py` | thinning barrier crossings: λ_min, attempt statistics, the (Q‡, λ) decision map (§2.5–2.8) |
+| `maxcal-reweight` | `maxcal/reweight.py` | MaxCal weights on whole trajectories: λ*, N_eff, per-trajectory weights (§2.3–2.4) |
+| `maxcal-committor` | `maxcal/committor.py` | model and corrected committor, TS location, committor-based TSE frames (§2.10) |
+| `maxcal-joint` | `maxcal/joint.py` | forward + backward runs: kinetic ΔG, transition-path symmetry, coupled tilt (§6) |
+| `maxcal-target` | `maxcal/target.py` | reweighting onto experimental rates with a Poisson target (§7) |
+
+Each is also runnable as `python -m maxcal.stitching ...`, and `import maxcal as m`
+re-exports the shared functions (`m.attempts`, `m.stitch`, `m.cv_curve`, `m.ts_location`).
 
 **Demo notebook.** `notebooks/demo.ipynb` walks through the method interactively,
 using the test datasets:
@@ -365,8 +377,10 @@ committed outputs:
 `MAXCAL_DEMO_STATIC=1 jupyter nbconvert --to notebook --execute --inplace notebooks/demo.ipynb`.
 
 ```bash
-python maxcal_poisson.py "runs/q_*.xvg" --qu 0.3 --qf 0.8 \
-       --qts 0.40 --qtse 0.55 --out results
+maxcal-stitch    "runs/q_*.xvg" --qu 0.3 --qf 0.8 --qts 0.40 --out stitch_out
+maxcal-reweight  "runs/q_*.xvg" --qu 0.3 --qf 0.8 --qts 0.40 --qtse 0.55 --out reweight_out
+maxcal-committor "runs/q_*.xvg" --qu 0.3 --qf 0.8 --qts 0.40 \
+                 --from-stitch stitch_out/summary.csv --out committor_out
 ```
 
 Input files contain either one column (Q; give `--dt`) or two columns (time, Q).
@@ -376,26 +390,28 @@ Lines starting with `#` or `@` are ignored, so GROMACS `.xvg` files work directl
 |---|---|
 | `--qu`, `--qf` | U basin (Q < Qu); folded state (Q ≥ Qf), where trajectories stop |
 | `--qts` | reference attempt interface, at the barrier foot (default: middle of the scan grid) |
-| `--qtse` | surface for TSE frames (default: same as each Q‡) |
-| `--barrier-q` | assumed location of the missing barrier, as a model committor value q* (default 0.5, the model TS; §2.10) |
-| `--tse-lams` | λ values for the committor-based TSE (default λ_min, λ_min+1, λ_min+2) |
-| `--committor-bins`, `--tse-window` | committor binning along Q; half-width of the TSE window |
-| `--heatmap-nlam`, `--heatmap-lam-max` | λ grid of the (Q‡, λ) KS heatmap (default 21 values in [0, 5] kT; 0 disables) |
+| `--qtse` | *(reweight)* surface for TSE frames (default: same as each Q‡) |
+| `--barrier-q` | *(committor, stitch)* assumed location of the missing barrier, as a model committor value q* (default 0.5, the model TS; §2.10) |
+| `--lams`, `--from-stitch` | *(committor)* λ values for the TSE, or λ_min (+1, +2) taken from a `maxcal-stitch` summary |
+| `--committor-bins`, `--tse-window` | *(committor)* binning along Q; half-width of the TSE window |
+| `--nstitch`, `--nsub`, `--lam-max`, `--nlam` | *(stitch)* synthetic times per λ, KS subsamples, λ grid |
+| `--boot`, `--neff-min` | *(reweight)* bootstrap resamples for λ*, N_eff threshold |
+| `--heatmap-nlam`, `--heatmap-lam-max` | *(stitch)* λ grid of the decision map (default 21 values in [0, 5] kT; 0 disables) |
 | `--nqts` | number of Q‡ values scanned for robustness |
 | `--t0` | discard an initial relaxation window |
 | `--include-initial` | keep the first segment of each trajectory in the stitching pools |
 | `--alpha`, `--cv-tol` | Poisson criterion for stitching: median KS p ≥ α and \|CV − 1\| ≤ tol |
 | `--neff-min` | N_eff threshold below which reweighting is flagged |
 
-**Outputs**
+**Outputs** (each tool writes into its own `--out` directory)
 
-- `summary.csv`: one row per Q‡, with p̂, geometric-test p, lag-1 correlation, CV,
-  KS p-values, λ* with bootstrap CI, N_eff, stitching threshold, and
-  `cv_stitch0`/`ksp_stitch0` (stitching at λ = 0).
-- `tse_frames_*.csv`: TSE frame per completed trajectory, with its weight.
-- `heatmap.csv`, `heatmap.png`: the (Q‡, λ) Poisson decision map (§2.8).
-- `committor.csv`, `ts_location.csv`, `ts_location.png`, `tse_committor_*.csv`: model
-  committor, corrected TS location, and committor-based TSE frames (§2.10).
+- **stitch**: `summary.csv` (one row per Q‡: attempt statistics, independence tests, CV
+  and KS at λ = 0, `cv_stitch0`/`ksp_stitch0`, λ_min, status codes), `heatmap.csv`/`.png`
+  (the decision map, §2.8), `survival.png`, `robustness_qts.png`.
+- **reweight**: `summary.csv` (λ* with bootstrap interval, N_eff, KS at λ*, `cv_lammax`,
+  status codes), `weights_qts*.csv` (one weight per trajectory), `tse_frames_qts*.csv`,
+  `survival.png`, `lambda_scan.png`.
+- **committor**: `committor.csv`, `ts_location.csv`/`.png`, `tse_committor_*.csv` (§2.10).
 
 **Status columns.** Every NaN in `summary.csv` comes with a reason code, so it can be
 told apart from a failure of the code.
@@ -406,7 +422,6 @@ told apart from a failure of the code.
 | `lag1_status` | `ok`; `too_few_pairs` (fewer than 10 consecutive failure cycles); `constant_cycles` (correlation undefined) |
 | `reweight_status` | `ok`; `no_root` (weighted CV never reaches 1, §2.4); `low_neff` (N_eff below `--neff-min`); `cv_ge_1_at_lambda0` (already over-dispersed: a missing barrier does not explain the deviation) |
 | `stitch_status` | `ok`; `ok_pool_fallback` (initial segments had to be used); `no_pass` (Poisson criterion never met in the scan); `empty_pool` (no failed attempts past this Q‡, typically at or beyond the barrier) |
-- `survival.png`, `lambda_scan.png`, `robustness_qts.png`.
 
 **Reading the results**
 
@@ -423,18 +438,18 @@ told apart from a failure of the code.
 ## 5. Tests
 
 ```bash
-pytest -q tests/                  # 63 fast tests (~15 s)
-pytest -q tests/ --runslow        # + 15 validation tests and the demo notebook (~35 s)
+pytest -q tests/                  # 64 fast tests (~13 s)
+pytest -q tests/ --runslow        # + 15 validation tests and the demo notebook (~32 s)
 MAXCAL_UPDATE_REF=1 pytest tests/test_regtest.py   # regenerate the reference
 ```
 
 - **`test_unit.py`**: parsing, attempt counting, tilt identities (§2.2–2.4),
   Kaplan–Meier, KS/Lilliefors size and power, geometric test, stitching moments
   (§2.5), and I/O.
-- **`test_regtest.py`**: full command-line run on 100 seeded overdamped Langevin
-  trajectories, compared with `tests/regtest/reference_summary.csv`. Deterministic
-  columns use rtol 1e-5; RNG-dependent stitching columns use loose absolute
-  tolerances.
+- **`test_regtest.py`**: runs `maxcal-stitch`, `maxcal-reweight` and `maxcal-committor`
+  on 100 seeded overdamped Langevin trajectories and compares the two summaries with
+  `tests/regtest/reference_stitching.csv` and `reference_reweight.csv`. Deterministic
+  columns use rtol 1e-5; RNG-dependent stitching columns use loose absolute tolerances.
 - **`test_reweight_path.py`**: end-to-end test of the path where reweighting
   succeeds, which the Langevin data never reach. It uses hand-built trajectories
   (`tests/synthetic.py`) in which the weighted CV crosses 1 at λ* ≈ 1.1 with
@@ -463,7 +478,7 @@ MAXCAL_UPDATE_REF=1 pytest tests/test_regtest.py   # regenerate the reference
 
 ---
 
-## 6. Joint mode: forward and backward trajectories (`maxcal_joint.py`)
+## 6. Joint mode: forward and backward trajectories (`maxcal-joint`)
 
 This mode analyses first-passage runs in both directions together: A→B (folding or
 binding) and B→A (unfolding or unbinding). You must state explicitly whether the
@@ -593,17 +608,17 @@ missing barrier may be desolvation or induced fit.
 
 ```bash
 # folding / unfolding at the same temperature, experimental DeltaG imposed
-python maxcal_joint.py --fwd "fold/*.xvg" --bwd "unfold/*.xvg" \
+maxcal-joint --fwd "fold/*.xvg" --bwd "unfold/*.xvg" \
     --qa 0.3 --qb 0.8 --qts-fwd 0.4 --qts-bwd 0.7 --qtse 0.55 \
     --temperature-relation same --dG -2.5 --out joint
 
 # unfolding simulated at a higher temperature
-python maxcal_joint.py --fwd "fold/*.xvg" --bwd "unfold_hot/*.xvg" \
+maxcal-joint --fwd "fold/*.xvg" --bwd "unfold_hot/*.xvg" \
     --qa 0.3 --qb 0.8 --qts-fwd 0.4 --qts-bwd 0.7 --qtse 0.55 \
     --temperature-relation different --out joint_hot
 
 # binding / unbinding on a distance CV (A = unbound at d > 2.0 nm)
-python maxcal_joint.py --fwd "on/*.xvg" --bwd "off/*.xvg" --system binding \
+maxcal-joint --fwd "on/*.xvg" --bwd "off/*.xvg" --system binding \
     --qa 2.0 --qb 0.6 --qts-fwd 1.4 --qts-bwd 0.8 --qtse 1.0 \
     --temperature-relation same --dG -8.0 --box-volume 343 --out joint_bind
 ```
@@ -644,7 +659,7 @@ python maxcal_joint.py --fwd "on/*.xvg" --bwd "off/*.xvg" --system binding \
 
 ---
 
-## 7. Matching experimental rates with a Poisson target (`maxcal_target.py`)
+## 7. Matching experimental rates with a Poisson target (`maxcal-target`)
 
 A complementary tool for the case where **experimental rate constants are available for
 several systems** (e.g. mutant series) and the model is systematically fast. Instead of
@@ -688,7 +703,7 @@ KS check is satisfied by construction and is only reported for completeness.
 ### 7.3 Usage
 
 ```bash
-python maxcal_target.py systems.csv --conc 0.017 --clock balanced --out target_out
+maxcal-target systems.csv --conc 0.017 --clock balanced --out target_out
 ```
 
 with `systems.csv`:

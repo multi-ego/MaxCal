@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 from scipy import stats
 
-import maxcal_poisson as m
+import maxcal as m
 from langevin import run_many
 
 QU, QF = 0.3, 0.8

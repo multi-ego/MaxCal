@@ -1,6 +1,0 @@
-qts,N,n_done,sum_k,frac_k0,p,geom_p,lag1_rho,lag1_p,cv0,ks_p0,lam_star,lam_lo,lam_hi,boot_noroot,neff_star,ks_p_star,reweight_ok,cv_lammax,kmax,cv_stitch0,ksp_stitch0,lam_stitch,p_stitch,geom_status,lag1_status,reweight_status,stitch_status,note
-0.383333,100,100,286,0.21,0.259067,0.241822,-0.0816005,0.329201,0.805936,0.00124969,nan,nan,nan,1,nan,nan,0,0.540971,12,0.938403,0.0847288,0,0.259067,ok,ok,no_root,ok,
-0.466667,100,100,123,0.44,0.44843,0.914989,-0.0628215,0.70789,0.805936,0.00124969,nan,nan,nan,1,nan,nan,0,0.464694,8,0.884336,0.0366158,0.4,0.352741,ok,ok,no_root,ok,
-0.55,100,100,57,0.62,0.636943,0.475826,nan,nan,0.805936,0.00124969,nan,nan,nan,1,nan,nan,0,0.495261,4,0.876319,0.0228693,0.6,0.490531,ok,too_few_pairs,no_root,ok,
-0.633333,100,100,25,0.77,0.8,nan,nan,nan,0.805936,0.00124969,nan,nan,nan,1,nan,nan,0,0.618446,2,0.765308,0.000249938,2.3,0.286242,too_few_bins,too_few_pairs,no_root,ok_pool_fallback,failure pool <10: initial segments included
-0.716667,100,100,11,0.89,0.900901,nan,nan,nan,0.805936,0.00124969,nan,nan,nan,1,nan,nan,0,0.649382,1,0.551963,0.000249938,3.35,0.24182,too_few_bins,too_few_pairs,no_root,ok_pool_fallback,failure pool <10: initial segments included

@@ -18,8 +18,8 @@ Checks:
 import numpy as np
 import pytest
 
-import maxcal_joint as mj
-import maxcal_poisson as mp
+from maxcal import joint as mj
+import maxcal as mp
 import langevin as L
 from langevin import run_many
 

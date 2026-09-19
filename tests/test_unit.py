@@ -1,8 +1,8 @@
-"""Unit tests for maxcal_poisson.py (run with: pytest -q tests/)."""
+"""Unit tests for the shared maxcal machinery (run with: pytest -q tests/)."""
 import numpy as np
 import pytest
 
-import maxcal_poisson as m
+import maxcal as m
 
 QU, QF = 0.3, 0.8
 

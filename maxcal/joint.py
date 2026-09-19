@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-maxcal_joint.py - joint MaxCal analysis of forward (A->B) and backward (B->A)
+maxcal-joint - joint MaxCal analysis of forward (A->B) and backward (B->A)
 first-passage trajectories: folding/unfolding or binding/unbinding.
 
-Uses the single-direction machinery of maxcal_poisson.py (attempt counting, tilt,
-stitching, Lilliefors test) and adds what only the pair of directions can give.
+Uses the single-direction machinery of maxcal.core and maxcal.stitching (attempt counting,
+tilt, stitching, Lilliefors test) and adds what only the pair of directions can give.
 
 --temperature-relation same
     Both sets sample the same ensemble.  One barrier correction must explain both
@@ -33,11 +33,11 @@ Forward trajectories start in A and stop on reaching B; backward ones start in B
 stop on reaching A.
 
 Example (folding, same temperature):
-  python maxcal_joint.py --fwd "fold/*.xvg" --bwd "unfold/*.xvg" \\
+  maxcal-joint --fwd "fold/*.xvg" --bwd "unfold/*.xvg" \\
       --qa 0.3 --qb 0.8 --qts-fwd 0.4 --qts-bwd 0.7 --qtse 0.55 \\
       --temperature-relation same --dG -2.5 --out joint
 Binding (distance CV, same temperature, one ligand in a box of V nm^3):
-  python maxcal_joint.py --fwd "on/*.xvg" --bwd "off/*.xvg" --system binding \\
+  maxcal-joint --fwd "on/*.xvg" --bwd "off/*.xvg" --system binding \\
       --qa 2.0 --qb 0.6 --qts-fwd 1.4 --qts-bwd 0.8 --qtse 1.0 \\
       --temperature-relation same --dG -8.0 --box-volume 343 --out joint
 """
@@ -53,7 +53,18 @@ from scipy import stats
 
 import matplotlib.pyplot as plt   # backend set to Agg in main(), not at import
 
-import maxcal_poisson as mp
+from types import SimpleNamespace
+
+from .core import (parse_traj, attempts, success_prob, tilted_p, geometric_test,
+                   ks_exp_weighted, lilliefors_p, null_D, D_rows, weighted_km, load_traj)
+from .stitching import stitch as _stitch, stitch_scan as _stitch_scan
+
+# the joint code was written against one flat module; keep that spelling
+mp = SimpleNamespace(parse_traj=parse_traj, attempts=attempts, success_prob=success_prob,
+                     tilted_p=tilted_p, geometric_test=geometric_test,
+                     ks_exp_weighted=ks_exp_weighted, lilliefors_p=lilliefors_p,
+                     null_D=null_D, D_rows=D_rows, weighted_km=weighted_km,
+                     load_traj=load_traj, stitch=_stitch, stitch_scan=_stitch_scan)
 
 C_STANDARD = 0.602214076  # 1 M in molecules per nm^3
 

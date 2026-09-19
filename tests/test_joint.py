@@ -1,9 +1,9 @@
-"""Unit tests and fast end-to-end checks for maxcal_joint.py."""
+"""Unit tests and fast end-to-end checks for maxcal.joint."""
 import numpy as np
 import pytest
 
-import maxcal_joint as mj
-import maxcal_poisson as mp
+from maxcal import joint as mj
+import maxcal as mp
 from langevin import run_many
 
 QA, QB, QTSE = 0.3, 0.8, 0.55
