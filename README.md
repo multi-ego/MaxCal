@@ -670,6 +670,9 @@ maxcal-joint --fwd "on/*.xvg" --bwd "off/*.xvg" --system binding \
 
 ## 7. Matching experimental rates with a Poisson target (`maxcal-target`)
 
+*A focused guide with the full derivation, the cost analysis, a worked example and
+references is in [`docs/TARGET.md`](docs/TARGET.md); this section is the summary.*
+
 A complementary tool for the case where **experimental rate constants are available for
 several systems** (e.g. mutant series) and the model is systematically fast. Instead of
 raising a barrier, it reweights trajectories so that their first-passage times match the
