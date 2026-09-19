@@ -353,7 +353,7 @@ The code is the package `maxcal`; one executable per step, all sharing `maxcal/c
 Each is also runnable as `python -m maxcal.stitching ...`, and `import maxcal as m`
 re-exports the shared functions (`m.attempts`, `m.stitch`, `m.cv_curve`, `m.ts_location`).
 
-**Demo notebook.** `notebooks/demo.ipynb` walks through the method interactively,
+**Demo notebooks.** `notebooks/demo.ipynb` walks through the method interactively,
 using the test datasets:
 - attempt counting as Q‡ moves;
 - the reweighting weights, their saturation, and the resulting CV and N_eff;
@@ -366,6 +366,11 @@ using the test datasets:
 pip install -e ".[demo]"
 jupyter lab notebooks/demo.ipynb
 ```
+
+`notebooks/target_demo.ipynb` does the same for `maxcal-target` (§7) on the twelve-system
+PDZ2-like dataset of its regression test: the clock calibration and what is left per
+system, the weights and their CDFs, the N_eff cost of the correction, how weights change a
+structural observable, and the affinity scatter before and after.
 
 `examples/walkthrough_ks_lambda.py` is a short script version of the key steps: raw
 folding times fail the KS test, reweighting and stitching are compared as λ grows, and
