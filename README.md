@@ -423,7 +423,7 @@ told apart from a failure of the code.
 ## 5. Tests
 
 ```bash
-pytest -q tests/                  # 54 fast tests (~12 s)
+pytest -q tests/                  # 63 fast tests (~15 s)
 pytest -q tests/ --runslow        # + 15 validation tests and the demo notebook (~35 s)
 MAXCAL_UPDATE_REF=1 pytest tests/test_regtest.py   # regenerate the reference
 ```
@@ -641,6 +641,85 @@ python maxcal_joint.py --fwd "on/*.xvg" --bwd "off/*.xvg" --system binding \
     (observed ≤ 8%);
   - transition paths are time-reversal symmetric at the same temperature;
   - a different temperature is detected, and misuse of "same" is flagged.
+
+---
+
+## 7. Matching experimental rates with a Poisson target (`maxcal_target.py`)
+
+A complementary tool for the case where **experimental rate constants are available for
+several systems** (e.g. mutant series) and the model is systematically fast. Instead of
+raising a barrier, it reweights trajectories so that their first-passage times match the
+experimental rates *and* a single-exponential target. The weights are the product: applied
+to structural observables, they show which trajectories, and which mechanisms, the
+experimental kinetics favour.
+
+### 7.1 Clock calibration
+
+Model rates are computed from the mean first-passage times (binding is pseudo-first-order
+at the simulation concentration, `--conc`) and compared with experiment,
+A = k_model/k_exp. A single global clock factor c is fitted across all systems and both
+directions, leaving per-system residual factors A/c: the change each mean time still needs.
+Only these residuals are physical, since c cancels in every ratio.
+
+`--clock` chooses c:
+- `geometric` — the geometric mean of A (the natural estimate);
+- `decrease-only` — the largest A, so every system needs a *slowdown*;
+- `balanced` (default) — maximises the worst-case N_eff;
+- an explicit number.
+
+The choice matters because slowing a sample down is cheap while speeding it up is not: for
+an exponential sample, changing the mean by a factor f keeps N_eff/N ≈ 2f − f², and f = 2
+is a hard limit.
+
+### 7.2 Weights
+
+- **`--mode target` (default).** w ∝ f_target/f_model, with f_model a gamma fitted to the
+  times by maximum likelihood and f_target the exponential with the experimental mean. Both
+  the mean and the exponential shape are imposed. The weights are flat when the model
+  already agrees (N_eff ≈ N), and a final exponential tilt fixes the mean exactly.
+- **`--mode mean`.** w ∝ exp(−θt), the maximum-entropy solution with the mean alone
+  constrained; useful for comparison.
+
+Diagnostics per system and direction: `N_eff`, its analytic expectation, the largest single
+weight, and `tail_gap` = exp(−t_max/τ_target), the target mass beyond the longest observed
+time, which is the honest limit on how much slower the target can be. In `target` mode the
+KS check is satisfied by construction and is only reported for completeness.
+
+### 7.3 Usage
+
+```bash
+python maxcal_target.py systems.csv --conc 0.017 --clock balanced --out target_out
+```
+
+with `systems.csv`:
+
+```
+system,kon_exp,koff_exp,bind_times,unbind_times
+EQVTAV_WT,2.6,22,times/EQVTAV_WT_bind.dat,times/EQVTAV_WT_unbind.dat
+EQVTAV_L18A,2.4,10.4,times/EQVTAV_L18A_bind.dat,times/EQVTAV_L18A_unbind.dat
+```
+
+`kon_exp` in µM⁻¹s⁻¹ and `koff_exp` in s⁻¹ (`--system-kind first-order` takes both in s⁻¹,
+e.g. folding/unfolding). Each times file holds one first-passage time per line, in model
+time units, in trajectory order.
+
+**Outputs:** `summary.csv` (clock residuals and diagnostics), `weights_<system>_<dir>.csv`
+(one weight per trajectory, for structural analysis), `calibration.png` (needed factors and
+N_eff), `cdf_bind.png` / `cdf_unbind.png` (model, reweighted and target CDFs).
+
+**Using the weights.** For any per-trajectory observable O_i (contacts formed at the
+transition, encounter-complex lifetime, order of contact formation), compare Σ w_i O_i with
+the unweighted mean; bootstrap over trajectories for errors. A large change with healthy
+N_eff means the experimental kinetics select a distinguishable subset of the model's
+mechanisms.
+
+### 7.4 Tests
+
+`test_target.py`: the weights reproduce the target mean and CDF; they are flat when the
+target equals the model; the `mean` mode is an exact exponential tilt; clock modes; the
+N_eff formula; an observable test in which reweighting a mis-shaped model sample recovers
+the target's average of a descriptor correlated with the first-passage time; and an
+end-to-end run whose needed factors scale with 1/c.
 
 ---
 
