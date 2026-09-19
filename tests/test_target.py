@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from scipy import stats
 
-import maxcal_target as mt
+from maxcal import target as mt
 
 
 # ------------------------------------------------------------------------ weights

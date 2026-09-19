@@ -5,7 +5,7 @@ KS test, and what does (and does not) fix lambda?  Run from the repository root:
 import sys; import os
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path[:0]=[ROOT, os.path.join(ROOT,'tests')]
-import numpy as np, maxcal_poisson as mp, langevin as L
+import numpy as np, maxcal as mp, langevin as L
 import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
 OUT='walkthrough_ks_lambda.png'
 QU,QF,QTS=0.3,0.8,0.40

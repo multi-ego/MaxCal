@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-maxcal_target.py - reweight binding/unbinding (or folding/unfolding) trajectories so that
+maxcal-target - reweight binding/unbinding (or folding/unfolding) trajectories so that
 their first-passage times match experimental rates AND a Poisson (single-exponential)
 target, then use the weights for structural analysis.
 
@@ -30,7 +30,7 @@ and give both rates in s^-1).  Each times file holds one first-passage time per 
 model's own time units (ps, ns, ...), in the order of the trajectories.
 
 Example:
-    python maxcal_target.py systems.csv --conc 0.017 --clock decrease-only --out target_out
+    maxcal-target systems.csv --conc 0.017 --clock decrease-only --out target_out
 """
 import argparse
 import csv

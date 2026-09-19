@@ -6,7 +6,7 @@ committors estimated from simulated trajectories, as the script does."""
 import numpy as np
 import pytest
 
-import maxcal_poisson as m
+import maxcal as m
 import langevin as L
 
 QU, QF, QTS, M_BUMP, SIG = 0.3, 0.8, 0.40, 0.55, 0.06

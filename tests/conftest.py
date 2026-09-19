@@ -4,7 +4,7 @@ import sys
 import pytest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, os.pardir))   # maxcal_poisson.py
+sys.path.insert(0, os.path.join(HERE, os.pardir))   # the maxcal package
 sys.path.insert(0, HERE)                             # langevin.py
 
 

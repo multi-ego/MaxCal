@@ -9,9 +9,9 @@ import sys
 import numpy as np
 import pytest
 
-import maxcal_poisson as m
+import maxcal as m
 from synthetic import write_reweight_set
-from test_regtest import SCRIPT, check_nan_reasons
+from test_regtest import ROOT, check_nan_reasons
 
 QU, QF, QTS = 0.3, 0.8, 0.45
 
@@ -21,10 +21,10 @@ def run(tmp_path_factory):
     d = tmp_path_factory.mktemp("reweight")
     specs = write_reweight_set(str(d / "data"))
     out = d / "out"
-    r = subprocess.run([sys.executable, SCRIPT, str(d / "data" / "s_*.xvg"),
+    r = subprocess.run([sys.executable, "-m", "maxcal.reweight", str(d / "data" / "s_*.xvg"),
                         "--qu", str(QU), "--qf", str(QF), "--qts", str(QTS), "--nqts", "1",
-                        "--boot", "100", "--nstitch", "1000", "--nsub", "50", "--seed", "3",
-                        "--out", str(out)], capture_output=True, text=True)
+                        "--boot", "100", "--seed", "3", "--out", str(out)],
+                       capture_output=True, text=True, cwd=ROOT)
     assert r.returncode == 0, r.stderr
     with open(out / "summary.csv") as fh:
         rows = {round(float(x["qts"]), 3): x for x in csv.DictReader(fh)}
@@ -59,7 +59,7 @@ def test_weighted_cv_is_one_at_lambda_star(run):
 def test_tse_weights_follow_the_tilt(run):
     out, rows, _, _ = run
     lam = float(rows[QTS]["lam_star"])
-    with open(next(out.glob(f"tse_frames_qts{QTS:.3f}*.csv"))) as fh:
+    with open(next(out.glob(f"weights_qts{QTS:.3f}.csv"))) as fh:
         tse = list(csv.DictReader(fh))
     w = np.array([float(t["weight_at_lambda_star"]) for t in tse])
     k = np.array([int(t["k_failed"]) for t in tse])
@@ -75,7 +75,6 @@ def test_statuses_explain_nans_beyond_attempts(run):
     assert r["geom_status"] == "too_few_bins"
     assert r["lag1_status"] == "too_few_pairs"
     assert r["reweight_status"] == "no_root"
-    assert r["stitch_status"] == "empty_pool"
     assert rows[QTS]["lag1_status"] == "constant_cycles"   # identical cycles by construction
     for row in rows.values():
         check_nan_reasons(row)
