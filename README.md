@@ -438,7 +438,7 @@ told apart from a failure of the code.
 ## 5. Tests
 
 ```bash
-pytest -q tests/                  # 64 fast tests (~13 s)
+pytest -q tests/                  # 67 fast tests (~15 s)
 pytest -q tests/ --runslow        # + 15 validation tests and the demo notebook (~32 s)
 MAXCAL_UPDATE_REF=1 pytest tests/test_regtest.py   # regenerate the reference
 ```
@@ -730,11 +730,17 @@ mechanisms.
 
 ### 7.4 Tests
 
-`test_target.py`: the weights reproduce the target mean and CDF; they are flat when the
+`test_target.py` (unit): the weights reproduce the target mean and CDF; they are flat when the
 target equals the model; the `mean` mode is an exact exponential tilt; clock modes; the
 N_eff formula; an observable test in which reweighting a mis-shaped model sample recovers
 the target's average of a descriptor correlated with the first-passage time; and an
 end-to-end run whose needed factors scale with 1/c.
+
+`test_target_regtest.py` (regression): a seeded 12-system PDZ2-like dataset built from
+the experimental table and the model rates (`tests/synthetic.py: write_rate_dataset`) is
+run through `maxcal-target` and compared with `tests/regtest/reference_target.csv`, with
+sanity checks that every weighted mean equals its target, the needed factors stay in a
+reachable range, and N_eff stays above 20 of 50.
 
 ---
 
