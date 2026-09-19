@@ -137,7 +137,7 @@ Pure reweighting is therefore reliable only when the trajectories already contai
 many failed attempts. The script reports the Kish effective sample size [7]
 
 $$
-N_\text{eff} = \frac{\left(\sum_i w_i\right)^2}{\sum_i w_i^2}
+N_\text{eff} = \frac{(\sum_i w_i)^2}{\sum_i w_i^2}
 $$
 
 and flags the result when N_eff falls below a threshold (default 30).
@@ -265,8 +265,11 @@ surface. With r = p′/p fixed by the attempt statistics at Q‡, the corrected 
 is
 
 $$
-q'(x) = r q_m(x) \quad (q_m < q^*), \qquad
-1 - q'(x) = r \left(1 - q_m(x)\right) \quad (q_m > q^*).
+q'(x) = r q_m(x) \quad \text{for } q_m < q^*
+$$
+
+$$
+1 - q'(x) = r (1 - q_m(x)) \quad \text{for } q_m > q^*
 $$
 
 In words:
@@ -291,7 +294,8 @@ exact to about 10⁻⁴ away from the bump (`tests/test_committor.py`).
   "correct structures, underestimated barrier."
 - **Other locations.** For q* ≠ 1/2 the TS moves toward the barrier as λ grows, and
   reaches it once the tilt is strong enough. `ts_location.csv` and `ts_location.png`
-  scan q* from 0.1 to 0.9 for λ_min, λ_min+1 and λ_min+2 (or `--tse-lams`), so you
+  scan q* from 0.1 to 0.9 for the λ values given by `--lams` (or λ_min, λ_min+1, λ_min+2
+  with `--from-stitch`), so you
   can see how much your TSE depends on this assumption. Values of q* before the
   attempt interface are flagged, because the tilt assumes the barrier lies beyond Q‡.
 - **Bounds.** The corrected TS always lies between Q‡ and Q_f (§2.8). `ts_location.csv`
@@ -525,7 +529,7 @@ scaled time of the model cancels.
 **Kinetic ΔG.** The quantity
 
 $$
-\Delta G_\text{kin} = -kT\ln\left(\frac{M_{BA}}{M_{AB}}\right)
+\Delta G_\text{kin} = -kT\ln(\frac{M_{BA}}{M_{AB}})
 $$
 
 must equal the equilibrium ΔG for two-state behaviour [25]. It is reported
@@ -599,7 +603,7 @@ box equilibrium constant is K_box = P_bound/P_unbound = k′_on/k_off, where k�
 the pseudo-first-order rate at [L] = 1/V. The standard binding free energy is [30]
 
 $$
-\Delta G^\circ = \Delta G_\text{box} - kT\ln\left(V C^\circ\right),
+\Delta G^\circ = \Delta G_\text{box} - kT\ln(V C^\circ),
 \qquad C^\circ = 1\ \text{M} = 0.6022\ \text{nm}^{-3}.
 $$
 
